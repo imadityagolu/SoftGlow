@@ -1,13 +1,193 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
+import customerService from '../services/customerService';
+import { getImageUrl } from '../utils/imageUtils';
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { logout, user, token, login } = useAuth();
+  const { cartItems, loading: cartLoading, updateCartItem, removeFromCart, clearCart, fetchCart } = useCart();
+  const [profileData, setProfileData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: {
+      street: '',
+      city: '',
+      state: '',
+      zipCode: '',
+      country: ''
+    }
+  });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
 
   const handleLogout = () => {
-    // Here you would clear authentication tokens
-    navigate('/customer/login');
+    logout();
+    window.location.href = '/';
+  };
+
+  // Handle URL parameters for tab navigation
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const tabParam = urlParams.get('tab');
+    if (tabParam && ['overview', 'orders', 'cart', 'favorites', 'profile'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [location.search]);
+
+  // Fetch customer profile data
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (token && activeTab === 'profile') {
+        try {
+          setLoading(true);
+          const response = await customerService.getProfile(token);
+          if (response.success) {
+            const customer = response.data.customer;
+            setProfileData({
+              firstName: customer.firstName || '',
+              lastName: customer.lastName || '',
+              email: customer.email || '',
+              phone: customer.phone || '',
+              address: {
+                street: customer.address?.street || '',
+                city: customer.address?.city || '',
+                state: customer.address?.state || '',
+                zipCode: customer.address?.zipCode || '',
+                country: customer.address?.country || ''
+              }
+            });
+          }
+        } catch (error) {
+          setMessage({ type: 'error', text: error.message });
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchProfile();
+  }, [token, activeTab]);
+
+  // Refresh cart when cart tab is active
+  useEffect(() => {
+    if (activeTab === 'cart') {
+      fetchCart();
+    }
+  }, [activeTab, fetchCart]);
+
+  // Handle profile form changes
+  const handleProfileChange = (e) => {
+    const { name, value } = e.target;
+    if (name.startsWith('address.')) {
+      const addressField = name.split('.')[1];
+      setProfileData(prev => ({
+        ...prev,
+        address: {
+          ...prev.address,
+          [addressField]: value
+        }
+      }));
+    } else {
+      setProfileData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  // Handle profile update
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      setMessage({ type: '', text: '' });
+      
+      const response = await customerService.updateProfile(profileData, token);
+      if (response.success) {
+        setMessage({ type: 'success', text: 'Profile updated successfully!' });
+        // Update user context with new data
+        login(response.data.customer, token, 'customer');
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message });
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle cart quantity update
+  const handleQuantityUpdate = async (itemId, newQuantity) => {
+    if (newQuantity < 1) return;
+    
+    console.log('handleQuantityUpdate called with:', { itemId, newQuantity });
+    console.log('Current cartItems:', cartItems.map(item => ({ id: item._id, productId: item.product._id, quantity: item.quantity })));
+    
+    // Find the cart item to check stock
+    const cartItem = cartItems.find(item => item._id === itemId);
+    if (cartItem && newQuantity > cartItem.product.quantity) {
+      setMessage({ type: 'error', text: `Only ${cartItem.product.quantity} items available in stock` });
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+      return;
+    }
+    
+    try {
+      await updateCartItem(itemId, newQuantity);
+      setMessage({ type: 'success', text: 'Cart updated successfully' });
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message });
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    }
+  };
+
+  // Handle cart item removal
+  const handleRemoveItem = async (itemId) => {
+    try {
+      console.log('handleRemoveItem called with:', { itemId });
+      console.log('Current cartItems:', cartItems.map(item => ({ id: item._id, productId: item.product._id })));
+      await removeFromCart(itemId);
+      setMessage({ type: 'success', text: 'Item removed from cart' });
+      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message });
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    }
+  };
+
+  // Handle profile form submission
+  const handleProfileSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      const response = await customerService.updateProfile(profileData, token);
+      if (response.success) {
+        setMessage({ type: 'success', text: 'Profile updated successfully!' });
+        setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      } else {
+        setMessage({ type: 'error', text: response.message || 'Failed to update profile' });
+        setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message || 'Failed to update profile' });
+      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate cart total
+  const calculateCartTotal = () => {
+    return cartItems.reduce((total, item) => total + (item.product.price * item.quantity), 0).toFixed(2);
   };
 
   const recentOrders = [
@@ -39,14 +219,8 @@ const CustomerDashboard = () => {
           <div className="space-y-6">
             {/* Welcome Section */}
             <div className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg p-6 text-white">
-              <h2 className="text-2xl font-bold mb-2">Welcome back, John!</h2>
+              <h2 className="text-2xl font-bold mb-2">Welcome, {user?.firstName || 'Customer'}!</h2>
               <p className="text-orange-100">Discover our latest candle collections and enjoy the perfect ambiance.</p>
-              <button 
-                onClick={() => navigate('/')}
-                className="mt-4 bg-white text-orange-600 px-6 py-2 rounded-lg font-medium hover:bg-orange-50 transition-colors"
-              >
-                Shop Now
-              </button>
             </div>
 
             {/* Stats Cards */}
@@ -188,23 +362,275 @@ const CustomerDashboard = () => {
               <h3 className="text-lg font-medium text-gray-900">Profile Settings</h3>
             </div>
             <div className="p-6">
-              <div className="max-w-md space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                  <input type="text" defaultValue="John Doe" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+              {loading ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+                  <span className="ml-2 text-gray-600">Loading profile...</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                  <input type="email" defaultValue="john@example.com" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+              ) : (
+                <form onSubmit={handleProfileSubmit} className="max-w-2xl space-y-6">
+                  {/* Message Display */}
+                  {message.text && (
+                    <div className={`p-4 rounded-lg ${
+                      message.type === 'success' 
+                        ? 'bg-green-100 text-green-700 border border-green-200' 
+                        : 'bg-red-100 text-red-700 border border-red-200'
+                    }`}>
+                      {message.text}
+                    </div>
+                  )}
+
+                  {/* Personal Information */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                      <input 
+                        type="text" 
+                        name="firstName"
+                        value={profileData.firstName}
+                        onChange={handleProfileChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" 
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                      <input 
+                        type="text" 
+                        name="lastName"
+                        value={profileData.lastName}
+                        onChange={handleProfileChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" 
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <input 
+                      type="email" 
+                      name="email"
+                      value={profileData.email}
+                      onChange={handleProfileChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-gray-50" 
+                      disabled
+                      title="Email cannot be changed"
+                    />
+                    <p className="text-sm text-gray-500 mt-1">Email cannot be changed</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                    <input 
+                      type="tel" 
+                      name="phone"
+                      value={profileData.phone}
+                      onChange={handleProfileChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" 
+                      required
+                    />
+                  </div>
+
+                  {/* Address Section */}
+                  <div className="border-t border-gray-200 pt-6">
+                    <h4 className="text-lg font-medium text-gray-900 mb-4">Address Information</h4>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
+                        <input 
+                          type="text" 
+                          name="address.street"
+                          value={profileData.address.street}
+                          onChange={handleProfileChange}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" 
+                          placeholder="123 Main Street"
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                          <input 
+                            type="text" 
+                            name="address.city"
+                            value={profileData.address.city}
+                            onChange={handleProfileChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" 
+                            placeholder="New York"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                          <input 
+                            type="text" 
+                            name="address.state"
+                            value={profileData.address.state}
+                            onChange={handleProfileChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" 
+                            placeholder="NY"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">ZIP Code</label>
+                          <input 
+                            type="text" 
+                            name="address.zipCode"
+                            value={profileData.address.zipCode}
+                            onChange={handleProfileChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" 
+                            placeholder="10001"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
+                          <input 
+                            type="text" 
+                            name="address.country"
+                            value={profileData.address.country}
+                            onChange={handleProfileChange}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" 
+                            placeholder="United States"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end pt-6">
+                    <button 
+                      type="submit"
+                      disabled={loading}
+                      className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    >
+                      {loading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Updating...
+                        </>
+                      ) : (
+                        'Update Profile'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        );
+      case 'cart':
+        return (
+          <div className="bg-white rounded-lg shadow">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900"> Cart</h3>
+            </div>
+            <div className="p-6">
+              {cartLoading ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+                  <span className="ml-2 text-gray-600">Loading cart...</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
-                  <input type="tel" defaultValue="+1 (555) 123-4567" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" />
+              ) : cartItems.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">🛒</span>
+                  </div>
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">Your cart is empty</h4>
+                  <p className="text-gray-500 mb-4">Add some products to get started!</p>
+                  <Link to="/products" className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors">
+                    Browse Products
+                  </Link>
                 </div>
-                <button className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors">
-                  Update Profile
-                </button>
-              </div>
+              ) : (
+                <div className="space-y-4">
+                  {cartItems.map((item) => (
+                    <div key={item.product._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center overflow-hidden">
+                          {item.product.images && item.product.images.length > 0 ? (
+                            <img 
+                              src={getImageUrl(item.product.images[0])} 
+                              alt={item.product.name}
+                              className="w-full h-full object-cover rounded-lg"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div className="w-full h-full flex items-center justify-center" style={{display: item.product.images && item.product.images.length > 0 ? 'none' : 'flex'}}>
+                            <span className="text-2xl">🕯️</span>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="font-medium text-gray-900">{item.product.name}</h4>
+                          <p className="text-sm text-gray-500">{item.product.description}</p>
+                          <p className="text-orange-600 font-bold">${item.product.price}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            onClick={() => handleQuantityUpdate(item._id, item.quantity - 1)}
+                            className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors"
+                            disabled={item.quantity <= 1}
+                          >
+                            -
+                          </button>
+                          <span className="w-8 text-center font-medium">{item.quantity}</span>
+                          <button 
+                            onClick={() => handleQuantityUpdate(item._id, item.quantity + 1)}
+                            className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={item.quantity >= item.product.quantity}
+                          >
+                            +
+                          </button>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-gray-900">${(item.product.price * item.quantity).toFixed(2)}</p>
+                          <button 
+                            onClick={() => handleRemoveItem(item._id)}
+                            className="text-red-600 hover:text-red-800 text-sm transition-colors"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Cart Summary */}
+                  <div className="border-t pt-4 mt-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-lg font-medium text-gray-900">Total: ${calculateCartTotal()}</span>
+                      <div className="space-x-4">
+                        <button 
+                          onClick={async () => {
+                            try {
+                              await clearCart();
+                              setMessage({ type: 'success', text: 'Cart cleared successfully' });
+                              setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+                            } catch (error) {
+                              setMessage({ type: 'error', text: error.message });
+                              setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+                            }
+                          }}
+                          className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          Clear Cart
+                        </button>
+                        <button className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors">
+                          Proceed to Checkout
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -220,17 +646,21 @@ const CustomerDashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
+              {/* Mobile menu button */}
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden mr-4 p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <Link to="/" className="flex items-center">
               <span className="text-2xl mr-3">🕯️</span>
               <h1 className="text-2xl font-bold text-gray-900">SoftGlow</h1>
+              </Link>
             </div>
             <div className="flex items-center space-x-4">
-              <button 
-                onClick={() => navigate('/')}
-                className="text-gray-700 hover:text-orange-600 transition-colors"
-              >
-                Shop
-              </button>
-              <span className="text-sm text-gray-700">Welcome, John</span>
               <button
                 onClick={handleLogout}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
@@ -244,23 +674,41 @@ const CustomerDashboard = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex">
+
           {/* Sidebar */}
-          <div className="w-64 bg-white rounded-lg shadow mr-8">
-            <nav className="mt-8">
+          <div className={`${sidebarOpen ? 'fixed inset-y-0 left-0 transform translate-x-0' : 'fixed inset-y-0 left-0 transform -translate-x-full'} lg:relative lg:translate-x-0 lg:block w-64 bg-white lg:rounded-lg shadow-lg lg:mr-8 z-30 lg:z-auto transition-transform duration-300 ease-in-out`}>
+            {/* Mobile header with close button */}
+            <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-amber-50">
+              <h2 className="text-lg font-semibold text-gray-900">SoftGlow {user?.firstName || ''}</h2>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-white transition-colors"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <nav className="mt-6 lg:mt-8">
               <div className="px-4 space-y-2">
                 {[
                   { id: 'overview', label: 'Overview', icon: '📊' },
                   { id: 'orders', label: 'My Orders', icon: '📦' },
+                  { id: 'cart', label: 'Cart', icon: '🛒' },
                   { id: 'favorites', label: 'Favorites', icon: '❤️' },
                   { id: 'profile', label: 'Profile', icon: '👤' }
                 ].map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setSidebarOpen(false); // Close sidebar on mobile after selection
+                    }}
+                    className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200 ${
                       activeTab === item.id
-                        ? 'bg-orange-100 text-orange-700 border-r-2 border-orange-500'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-orange-800 border-r-4 border-orange-500 shadow-sm'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'
                     }`}
                   >
                     <span className="mr-3">{item.icon}</span>
@@ -270,6 +718,14 @@ const CustomerDashboard = () => {
               </div>
             </nav>
           </div>
+
+          {/* Overlay for mobile */}
+          {sidebarOpen && (
+            <div 
+              className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20 transition-opacity duration-300 ease-in-out"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
 
           {/* Main Content */}
           <div className="flex-1">

@@ -1,13 +1,249 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import productService from '../services/productService';
+import customerService from '../services/customerService';
+import { getImageUrl } from '../utils/imageUtils';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { logout, token, user } = useAuth();
+  const [products, setProducts] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    price: '',
+    quantity: '',
+    category: 'candles',
+    images: []
+  });
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    show: false,
+    productId: null,
+    productName: ''
+  });
+
+  // Add Product Form State
+  const [productForm, setProductForm] = useState({
+    name: '',
+    description: '',
+    price: '',
+    quantity: '',
+    category: 'candles',
+    images: []
+  });
 
   const handleLogout = () => {
-    // Here you would clear authentication tokens
-    navigate('/admin/login');
+    logout();
+    window.location.href = '/';
+  };
+
+  // Fetch products from API
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const response = await productService.getAllProducts({ limit: 50 });
+      setProducts(response.data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      alert('Error fetching products: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch customers from API
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const response = await customerService.getAllCustomers({ limit: 50 }, token);
+      setCustomers(response.data || []);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      alert('Error fetching customers: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Toggle customer status
+  const toggleCustomerStatus = async (customerId, newStatus) => {
+    try {
+      await customerService.updateCustomerStatus(customerId, newStatus, token);
+      alert(`Customer ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+      // Refresh customers list
+      fetchCustomers();
+    } catch (error) {
+      alert('Error updating customer status: ' + error.message);
+    }
+  };
+
+  // Start editing a product
+  const startEditProduct = (product) => {
+    setEditingProduct(product._id);
+    setEditForm({
+      name: product.name,
+      description: product.description,
+      price: product.price.toString(),
+      quantity: product.quantity.toString(),
+      category: product.category,
+      images: product.images || []
+    });
+    setActiveTab('edit-product');
+  };
+
+  // Cancel editing
+  const cancelEdit = () => {
+    setEditingProduct(null);
+    setActiveTab('products');
+    setEditForm({
+      name: '',
+      description: '',
+      price: '',
+      quantity: '',
+      category: 'candles',
+      images: []
+    });
+  };
+
+  // Update product
+  const updateProduct = async (productId) => {
+    try {
+      setLoading(true);
+      
+      let imageUrls = editForm.images;
+      
+      // If new files were selected, upload them
+      if (editForm.images.length > 0 && editForm.images[0] instanceof File) {
+        const uploadResponse = await productService.uploadImages(editForm.images, token);
+        imageUrls = uploadResponse.data.images;
+      }
+      
+      const productData = {
+        name: editForm.name,
+        description: editForm.description,
+        price: parseFloat(editForm.price),
+        quantity: parseInt(editForm.quantity),
+        category: editForm.category,
+        images: imageUrls
+      };
+      
+      await productService.updateProduct(productId, productData, token);
+      alert('Product updated successfully!');
+      cancelEdit();
+      fetchProducts();
+    } catch (error) {
+      alert('Error updating product: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete product
+  const showDeleteConfirmation = (product) => {
+    setDeleteConfirmation({
+      show: true,
+      productId: product._id,
+      productName: product.name
+    });
+  };
+
+  const hideDeleteConfirmation = () => {
+    setDeleteConfirmation({
+      show: false,
+      productId: null,
+      productName: ''
+    });
+  };
+
+  const confirmDeleteProduct = async () => {
+    try {
+      setLoading(true);
+      await productService.deleteProduct(deleteConfirmation.productId, token);
+      hideDeleteConfirmation();
+      fetchProducts();
+      // Show success message
+      alert('Product deleted successfully!');
+    } catch (error) {
+      alert('Error deleting product: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle edit form image change
+  const handleEditImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length < 1) {
+      alert('Please select at least 1 image');
+      return;
+    }
+    
+    setEditForm(prev => ({ ...prev, images: files }));
+  };
+
+  // Fetch data when component mounts or when switching tabs
+  useEffect(() => {
+    if (activeTab === 'products') {
+      fetchProducts();
+    } else if (activeTab === 'customers') {
+      fetchCustomers();
+    }
+  }, [activeTab]);
+
+  const handleImageChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length < 1) {
+      alert('Please select at least 1 image');
+      return;
+    }
+    setProductForm(prev => ({ ...prev, images: files }));
+  };
+
+  const handleProductSubmit = async (e) => {
+    e.preventDefault();
+    if (productForm.images.length < 1) {
+      alert('Please select at least 1 image');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Upload images first
+      const uploadResponse = await productService.uploadImages(productForm.images, token);
+      const imageUrls = uploadResponse.data.images;
+      
+      const productData = {
+        name: productForm.name,
+        description: productForm.description,
+        price: parseFloat(productForm.price),
+        quantity: parseInt(productForm.quantity),
+        category: productForm.category,
+        images: imageUrls
+      };
+      
+      await productService.createProduct(productData, token);
+      alert('Product added successfully!');
+      setProductForm({ name: '', description: '', price: '', quantity: '', category: 'candles', images: [] });
+      
+      // Reset file input
+      const fileInput = document.querySelector('input[type="file"]');
+      if (fileInput) fileInput.value = '';
+      
+      // Refresh products list if on products tab
+      if (activeTab === 'products') {
+        fetchProducts();
+      }
+    } catch (error) {
+      alert('Error adding product: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const stats = [
@@ -97,11 +333,362 @@ const AdminDashboard = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-medium text-gray-900">Product Management</h3>
-              <button className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors">
+              <button 
+                onClick={() => setActiveTab('add-product')}
+                className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors"
+              >
                 Add New Product
               </button>
             </div>
-            <p className="text-gray-600">Product management interface will be implemented here.</p>
+            
+            {loading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+                <span className="ml-2 text-gray-600">Loading products...</span>
+              </div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600">No products found. Add your first product!</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {products.map((product) => (
+                      <tr key={product._id}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10">
+                              {product.images && product.images.length > 0 ? (
+                                <img className="h-10 w-10 rounded-full object-cover" src={getImageUrl(product.images[0])} alt={product.name} />
+                              ) : (
+                                <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                  <span className="text-gray-600 text-xs">No Image</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                              <div className="text-sm text-gray-500">{product.description?.substring(0, 50)}...</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="capitalize text-sm text-gray-900">{product.category}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ₹{product.price?.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {product.quantity}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            product.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {product.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button 
+                            onClick={() => startEditProduct(product)}
+                            className="text-amber-600 hover:text-amber-900 mr-3"
+                          >
+                            Edit
+                          </button>
+                          <button 
+                            onClick={() => showDeleteConfirmation(product)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+      case 'add-product':
+        return (
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-6">
+              <button 
+                onClick={() => setActiveTab('products')}
+                className="mr-4 text-gray-600 hover:text-gray-800"
+              >
+                ← Back to Products
+              </button>
+              <h3 className="text-lg font-medium text-gray-900">Add New Product</h3>
+            </div>
+            
+            <form onSubmit={handleProductSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Product Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={productForm.name}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  placeholder="Enter product name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description *
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={productForm.description}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  placeholder="Enter product description"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Price (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    value={productForm.price}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, price: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Quantity *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={productForm.quantity}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, quantity: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category *
+                  </label>
+                  <select
+                    required
+                    value={productForm.category}
+                    onChange={(e) => setProductForm(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  >
+                    <option value="candles">Candles</option>
+                    <option value="aromatherapy">Aromatherapy</option>
+                    <option value="gift-sets">Gift Sets</option>
+                    <option value="accessories">Accessories</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Product Images * (Select at least 1 image)
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                />
+                {productForm.images.length > 0 && (
+                  <div className="mt-2 text-sm text-gray-600">
+                    {productForm.images.length} image(s) selected
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end space-x-4">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('products')}
+                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Adding Product...
+                    </>
+                  ) : (
+                    'Add Product'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        );
+      case 'edit-product':
+        return (
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center mb-6">
+              <button 
+                onClick={cancelEdit}
+                className="mr-4 text-gray-600 hover:text-gray-800"
+              >
+                ← Back to Products
+              </button>
+              <h3 className="text-lg font-medium text-gray-900">Edit Product</h3>
+            </div>
+            
+            <form onSubmit={(e) => { e.preventDefault(); updateProduct(editingProduct); }} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Product Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.name}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  placeholder="Enter product name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description *
+                </label>
+                <textarea
+                  required
+                  rows={4}
+                  value={editForm.description}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  placeholder="Enter product description"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Price ($) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    value={editForm.price}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, price: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Quantity *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={editForm.quantity}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, quantity: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    placeholder="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category *
+                  </label>
+                  <select
+                    required
+                    value={editForm.category}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  >
+                    <option value="candles">Candles</option>
+                    <option value="aromatherapy">Aromatherapy</option>
+                    <option value="gift-sets">Gift Sets</option>
+                    <option value="accessories">Accessories</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Product Images (Select new images to replace current ones)
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleEditImageChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                />
+                <div className="mt-2 text-sm text-gray-600">
+                  Current images: {editForm.images.length} image(s)
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-4">
+                <button
+                  type="button"
+                  onClick={cancelEdit}
+                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="px-6 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Updating Product...
+                    </>
+                  ) : (
+                    'Update Product'
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         );
       case 'orders':
@@ -114,8 +701,82 @@ const AdminDashboard = () => {
       case 'customers':
         return (
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-6">Customer Management</h3>
-            <p className="text-gray-600">Customer management interface will be implemented here.</p>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-medium text-gray-900">Customer Management</h3>
+            </div>
+            
+            {loading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+                <span className="ml-2 text-gray-600">Loading customers...</span>
+              </div>
+            ) : customers.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600">No customers found.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {customers.map((customer) => (
+                      <tr key={customer._id}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10">
+                              <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
+                                <span className="text-amber-600 font-medium text-sm">
+                                  {customer.firstName?.charAt(0)}{customer.lastName?.charAt(0)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">
+                                {customer.firstName} {customer.lastName}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {customer.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {customer.phone || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(customer.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            customer.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {customer.isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button className="text-amber-600 hover:text-amber-900 mr-3">View</button>
+                          <button 
+                            onClick={() => toggleCustomerStatus(customer._id, !customer.isActive)}
+                            className={`${customer.isActive ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'}`}
+                          >
+                            {customer.isActive ? 'Deactivate' : 'Activate'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         );
       default:
@@ -130,10 +791,20 @@ const AdminDashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
+              {/* Mobile menu button */}
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden mr-4 p-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <span className="text-2xl mr-3">🕯️</span>
               <h1 className="text-2xl font-bold text-gray-900">SoftGlow Admin</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-700">Welcome, Admin</span>
+              <span className="text-sm text-gray-700">Welcome, {user?.firstName || 'Admin'}</span>
               <button
                 onClick={handleLogout}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
@@ -148,22 +819,39 @@ const AdminDashboard = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex">
           {/* Sidebar */}
-          <div className="w-64 bg-white rounded-lg shadow mr-8">
-            <nav className="mt-8">
+          <div className={`${sidebarOpen ? 'fixed inset-y-0 left-0 transform translate-x-0' : 'fixed inset-y-0 left-0 transform -translate-x-full'} lg:relative lg:translate-x-0 lg:block w-64 bg-white lg:rounded-lg shadow-lg lg:mr-8 z-30 lg:z-auto transition-transform duration-300 ease-in-out`}>
+            {/* Mobile header with close button */}
+            <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50">
+              <h2 className="text-lg font-semibold text-gray-900">SoftGlow Admin</h2>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-white transition-colors"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <nav className="mt-6 lg:mt-8">
               <div className="px-4 space-y-2">
                 {[
                   { id: 'overview', label: 'Overview', icon: '📊' },
                   { id: 'products', label: 'Products', icon: '🕯️' },
+                  { id: 'add-product', label: 'Add Product', icon: '➕' },
                   { id: 'orders', label: 'Orders', icon: '📦' },
                   { id: 'customers', label: 'Customers', icon: '👥' }
                 ].map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setSidebarOpen(false); // Close sidebar on mobile after selection
+                    }}
+                    className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-all duration-200 ${
                       activeTab === item.id
-                        ? 'bg-amber-100 text-amber-700 border-r-2 border-amber-500'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 border-r-4 border-amber-500 shadow-sm'
+                        : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:shadow-sm'
                     }`}
                   >
                     <span className="mr-3">{item.icon}</span>
@@ -174,12 +862,70 @@ const AdminDashboard = () => {
             </nav>
           </div>
 
+          {/* Overlay for mobile */}
+          {sidebarOpen && (
+            <div 
+              className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20 transition-opacity duration-300 ease-in-out"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+
           {/* Main Content */}
           <div className="flex-1">
             {renderContent()}
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmation.show && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center mb-4">
+              <div className="flex-shrink-0">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-medium text-gray-900">Delete Product</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700">
+                Are you sure you want to delete <span className="font-semibold">"{deleteConfirmation.productName}"</span>? This will permanently remove the product from your inventory.
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={hideDeleteConfirmation}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteProduct}
+                disabled={loading}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Product'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

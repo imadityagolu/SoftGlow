@@ -157,9 +157,7 @@ const loginCustomer = async (req, res) => {
 // Get Customer Profile
 const getCustomerProfile = async (req, res) => {
   try {
-    const customer = await Customer.findById(req.customer.id)
-      .populate('orders')
-      .populate('favorites');
+    const customer = await Customer.findById(req.customer.id);
     
     if (!customer) {
       return res.status(404).json({
