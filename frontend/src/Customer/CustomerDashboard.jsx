@@ -3,7 +3,9 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import customerService from '../services/customerService';
+import orderService from '../services/orderService';
 import { getImageUrl } from '../utils/imageUtils';
+import { toast } from 'react-toastify';
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
@@ -27,6 +29,8 @@ const CustomerDashboard = () => {
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -41,6 +45,34 @@ const CustomerDashboard = () => {
       setActiveTab(tabParam);
     }
   }, [location.search]);
+
+  // Fetch customer orders
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (token && activeTab === 'orders') {
+        try {
+          setOrdersLoading(true);
+          const response = await orderService.getCustomerOrders();
+          // Backend returns orders directly in response.orders
+          setOrders(response.orders || []);
+        } catch (error) {
+          console.error('Error fetching orders:', error);
+          // If JWT error, user might need to log in again
+          if (error.message.includes('invalid signature') || error.message.includes('jwt')) {
+            toast.error('Session expired. Please log in again.');
+            logout();
+            navigate('/customer/login');
+          } else {
+            toast.error('Failed to fetch orders');
+          }
+        } finally {
+          setOrdersLoading(false);
+        }
+      }
+    };
+    
+    fetchOrders();
+  }, [token, activeTab, logout, navigate]);
 
   // Fetch customer profile data
   useEffect(() => {
@@ -190,6 +222,85 @@ const CustomerDashboard = () => {
     return cartItems.reduce((total, item) => total + (item.product.price * item.quantity), 0).toFixed(2);
   };
 
+  // Handle checkout process
+  const handleCheckout = async () => {
+    try {
+      setLoading(true);
+      
+      // First validate customer data
+      const validationResponse = await orderService.validateCustomerData();
+      
+      if (!validationResponse.valid) {
+        toast.error(validationResponse.message);
+        setActiveTab('profile'); // Redirect to profile tab to update missing info
+        return;
+      }
+      
+      // Create Razorpay order
+      const orderResponse = await orderService.createPaymentOrder();
+      
+      if (!orderResponse.orderId) {
+        toast.error('Failed to create payment order');
+        return;
+      }
+      
+      // Initialize Razorpay
+      const options = {
+        key: orderResponse.key,
+        amount: orderResponse.amount * 100, // Convert to paise
+        currency: orderResponse.currency,
+        name: 'SoftGlow',
+        description: 'Order Payment',
+        order_id: orderResponse.orderId,
+        handler: async function (response) {
+          try {
+            // Verify payment and create order
+            const verificationResponse = await orderService.verifyPaymentAndCreateOrder({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            });
+            
+            if (verificationResponse.message === 'Order placed successfully') {
+              toast.success('Order placed successfully!');
+              // Clear cart after successful order
+              await clearCart();
+              // Optionally redirect to orders tab
+              setActiveTab('orders');
+            } else {
+              toast.error('Payment verification failed');
+            }
+          } catch (error) {
+            console.error('Payment verification error:', error);
+            toast.error('Payment verification failed');
+          }
+        },
+        prefill: {
+          name: profileData.name,
+          email: profileData.email,
+          contact: profileData.phone
+        },
+        theme: {
+          color: '#ea580c'
+        },
+        modal: {
+          ondismiss: function() {
+            toast.warning('Payment cancelled');
+          }
+        }
+      };
+      
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+      
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast.error(error.message || 'Checkout failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const recentOrders = [
     { id: '#001', product: 'Vanilla Candle Set', date: '2024-01-15', amount: '$89.99', status: 'Delivered' },
     { id: '#002', product: 'Lavender Aromatherapy', date: '2024-01-10', amount: '$45.50', status: 'Shipped' },
@@ -299,34 +410,82 @@ const CustomerDashboard = () => {
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Order History</h3>
             </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {recentOrders.map((order) => (
-                    <tr key={order.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{order.id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.product}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.date}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.amount}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
-                          {order.status}
-                        </span>
-                      </td>
+            {ordersLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+                <span className="ml-2 text-gray-600">Loading orders...</span>
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="text-center py-8">
+                <span className="text-4xl mb-4 block">📦</span>
+                <p className="text-gray-500 mb-4">No orders found</p>
+                <p className="text-sm text-gray-400">Your order history will appear here once you make your first purchase.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order #</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {orders.map((order) => (
+                      <tr key={order._id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{order.orderNumber}</td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          <div className="flex items-center space-x-3">
+                            {order.items.length > 0 && (
+                              <>
+                                
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {order.items[0].product?.name || order.items[0].name}
+                                  </div>
+                                  {order.items.length > 1 && (
+                                    <div className="text-xs text-gray-500">+{order.items.length - 1} more items</div>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          <div className="max-w-xs">
+                            {order.items.slice(0, 2).map((item, index) => (
+                              <div key={index} className="text-sm">
+                                x {item.quantity}
+                              </div>
+                            ))}
+                            {order.items.length > 2 && (
+                              <div className="text-xs text-gray-500">+{order.items.length - 2} more items</div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(order.orderDate).toLocaleDateString('en-IN', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">₹{order.totalAmount}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
+                            {order.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         );
       case 'favorites':
@@ -421,15 +580,21 @@ const CustomerDashboard = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone {user?.googleId && <span className="text-sm text-gray-500">(Optional)</span>}
+                    </label>
                     <input 
                       type="tel" 
                       name="phone"
                       value={profileData.phone}
                       onChange={handleProfileChange}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" 
-                      required
+                      required={!user?.googleId}
+                      placeholder={user?.googleId ? "Add your phone number (optional)" : ""}
                     />
+                    {user?.googleId && !profileData.phone && (
+                      <p className="text-sm text-gray-500 mt-1">You can add your phone number for better account security and order updates.</p>
+                    )}
                   </div>
 
                   {/* Address Section */}
@@ -568,8 +733,7 @@ const CustomerDashboard = () => {
                         </div>
                         <div>
                           <h4 className="font-medium text-gray-900">{item.product.name}</h4>
-                          <p className="text-sm text-gray-500">{item.product.description}</p>
-                          <p className="text-orange-600 font-bold">${item.product.price}</p>
+                          <p className="text-orange-600 font-bold">₹{item.product.price}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
@@ -581,7 +745,7 @@ const CustomerDashboard = () => {
                           >
                             -
                           </button>
-                          <span className="w-8 text-center font-medium">{item.quantity}</span>
+                          <span className="w-4 text-center font-medium">{item.quantity}</span>
                           <button 
                             onClick={() => handleQuantityUpdate(item._id, item.quantity + 1)}
                             className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -591,12 +755,13 @@ const CustomerDashboard = () => {
                           </button>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-gray-900">${(item.product.price * item.quantity).toFixed(2)}</p>
+                          <p className="font-bold text-gray-900">₹{(item.product.price * item.quantity).toFixed(2)}</p>
                           <button 
                             onClick={() => handleRemoveItem(item._id)}
-                            className="text-red-600 hover:text-red-800 text-sm transition-colors"
+                            className="text-red-600 hover:text-red-800 text-sm transition-colors p-1 rounded hover:bg-red-50"
+                            title="Remove item"
                           >
-                            Remove
+                            🗑️ remove
                           </button>
                         </div>
                       </div>
@@ -606,28 +771,17 @@ const CustomerDashboard = () => {
                   {/* Cart Summary */}
                   <div className="border-t pt-4 mt-6">
                     <div className="flex justify-between items-center mb-4">
-                      <span className="text-lg font-medium text-gray-900">Total: ${calculateCartTotal()}</span>
-                      <div className="space-x-4">
+                      <span className="text-lg font-medium text-gray-900">Total: ₹{calculateCartTotal()}</span>
+                    </div>
+                    <div>
                         <button 
-                          onClick={async () => {
-                            try {
-                              await clearCart();
-                              setMessage({ type: 'success', text: 'Cart cleared successfully' });
-                              setTimeout(() => setMessage({ type: '', text: '' }), 3000);
-                            } catch (error) {
-                              setMessage({ type: 'error', text: error.message });
-                              setTimeout(() => setMessage({ type: '', text: '' }), 5000);
-                            }
-                          }}
-                          className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          onClick={handleCheckout}
+                          disabled={loading || cartItems.length === 0}
+                          className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Clear Cart
-                        </button>
-                        <button className="bg-orange-600 text-white px-6 py-2 rounded-lg hover:bg-orange-700 transition-colors">
-                          Proceed to Checkout
+                          {loading ? 'Processing...' : 'Proceed to Checkout'}
                         </button>
                       </div>
-                    </div>
                   </div>
                 </div>
               )}

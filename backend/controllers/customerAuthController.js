@@ -11,21 +11,13 @@ const generateToken = (id) => {
 // Customer Registration
 const registerCustomer = async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, password, confirmPassword, agreeToTerms } = req.body;
+    const { firstName, lastName, email, password, agreeToTerms } = req.body;
 
     // Validation
-    if (!firstName || !lastName || !email || !phone || !password || !confirmPassword) {
+    if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({
         success: false,
         message: 'All fields are required'
-      });
-    }
-
-    // Check if passwords match
-    if (password !== confirmPassword) {
-      return res.status(400).json({
-        success: false,
-        message: 'Passwords do not match'
       });
     }
 
@@ -46,21 +38,11 @@ const registerCustomer = async (req, res) => {
       });
     }
 
-    // Check if phone number already exists
-    const existingPhone = await Customer.findOne({ phone });
-    if (existingPhone) {
-      return res.status(400).json({
-        success: false,
-        message: 'Customer with this phone number already exists'
-      });
-    }
-
     // Create new customer
     const customer = await Customer.create({
       firstName,
       lastName,
       email,
-      phone,
       password
     });
 
@@ -231,10 +213,34 @@ const logoutCustomer = async (req, res) => {
   });
 };
 
+// Google OAuth Callback
+const googleAuthCallback = async (req, res) => {
+  try {
+    // User is authenticated via Passport
+    const customer = req.user;
+    
+    // Generate JWT token
+    const token = generateToken(customer._id);
+    
+    // Update last login
+    customer.lastLogin = new Date();
+    await customer.save();
+    
+    // Redirect to frontend with token and user data
+    const redirectUrl = `${process.env.FRONTEND_URL}/customer/oauth-success?token=${token}&user=${encodeURIComponent(JSON.stringify(customer))}`;
+    res.redirect(redirectUrl);
+    
+  } catch (error) {
+    console.error('Google OAuth callback error:', error);
+    res.redirect(`${process.env.FRONTEND_URL}/customer/login?error=oauth_callback_failed`);
+  }
+};
+
 module.exports = {
   registerCustomer,
   loginCustomer,
   getCustomerProfile,
   updateCustomerProfile,
-  logoutCustomer
+  logoutCustomer,
+  googleAuthCallback
 };

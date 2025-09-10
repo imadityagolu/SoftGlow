@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import ProductService from '../services/productService';
 import { getImageUrl } from '../utils/imageUtils';
 import { useAuth } from '../contexts/AuthContext';
@@ -142,14 +143,14 @@ const Home = () => {
     try {
       setAddingToCart(prev => ({ ...prev, [productId]: true }));
       await addToCart(productId, 1); // Default quantity 1
-      alert(`Added ${productName} to cart!`);
+      toast.success(`Added ${productName} to cart!`);
     } catch (error) {
       console.error('Error adding to cart:', error);
       if (error.response?.status === 401) {
         // Token expired or invalid, redirect to login
         navigate('/customer/login');
       } else {
-        alert('Failed to add product to cart. Please try again.');
+        toast.error('Failed to add product to cart. Please try again.');
       }
     } finally {
       setAddingToCart(prev => ({ ...prev, [productId]: false }));
@@ -239,30 +240,6 @@ const Home = () => {
         >
           →
         </button>
-      </section>
-
-      {/* Popular Categories */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Popular Categories</h2>
-            <p className="text-xl text-gray-600">Discover our most loved candle collections</p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {categories.map((category, index) => (
-              <div key={index} className="group cursor-pointer">
-                <div className="bg-gradient-to-br from-amber-50 to-orange-100 rounded-2xl p-8 text-center hover:shadow-xl transition-all duration-300 transform group-hover:-translate-y-2">
-                  <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                    <span className="text-4xl">{category.image}</span>
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">{category.name}</h3>
-                  <p className="text-gray-600">{category.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </section>
 
       {/* Featured Products */}
@@ -373,6 +350,30 @@ const Home = () => {
               </Link>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Popular Categories */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Popular Categories</h2>
+            <p className="text-xl text-gray-600">Discover our most loved candle collections</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {categories.map((category, index) => (
+              <div key={index} className="group cursor-pointer">
+                <div className="bg-gradient-to-br from-amber-50 to-orange-100 rounded-2xl p-8 text-center hover:shadow-xl transition-all duration-300 transform group-hover:-translate-y-2">
+                  <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
+                    <span className="text-4xl">{category.image}</span>
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">{category.name}</h3>
+                  <p className="text-gray-600">{category.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

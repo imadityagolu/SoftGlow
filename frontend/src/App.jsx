@@ -1,5 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
 // Import components
@@ -12,6 +14,7 @@ import AdminDashboard from './Admin/AdminDashboard';
 import CustomerLogin from './Customer/CustomerLogin';
 import CustomerSignup from './Customer/CustomerSignup';
 import CustomerDashboard from './Customer/CustomerDashboard';
+import OAuthSuccess from './Customer/OAuthSuccess';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Import Auth Context
@@ -43,7 +46,8 @@ function App() {
             
             {/* Customer Routes */}
             <Route path="/customer/login" element={<CustomerLogin />} />
-            <Route path="/customer/signup" element={<CustomerSignup />} />
+          <Route path="/customer/signup" element={<CustomerSignup />} />
+          <Route path="/customer/oauth-success" element={<OAuthSuccess />} />
             <Route path="/customer/dashboard" element={
               <ProtectedRoute requiredUserType="customer">
                 <CustomerDashboard />
@@ -56,6 +60,18 @@ function App() {
       </div>
     </Router>
       </CartProvider>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
   </AuthProvider>
   );
 }

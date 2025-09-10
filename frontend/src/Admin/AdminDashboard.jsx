@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import productService from '../services/productService';
 import customerService from '../services/customerService';
+import orderService from '../services/orderService';
 import { getImageUrl } from '../utils/imageUtils';
 
 const AdminDashboard = () => {
@@ -12,7 +14,9 @@ const AdminDashboard = () => {
   const { logout, token, user } = useAuth();
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [editForm, setEditForm] = useState({
     name: '',
@@ -51,7 +55,7 @@ const AdminDashboard = () => {
       setProducts(response.data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
-      alert('Error fetching products: ' + error.message);
+      toast.error('Error fetching products: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -65,9 +69,23 @@ const AdminDashboard = () => {
       setCustomers(response.data || []);
     } catch (error) {
       console.error('Error fetching customers:', error);
-      alert('Error fetching customers: ' + error.message);
+      toast.error('Error fetching customers: ' + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch orders from API
+  const fetchOrders = async () => {
+    try {
+      setOrdersLoading(true);
+      const response = await orderService.getAllOrders(token);
+      setOrders(response.orders || []);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      toast.error('Error fetching orders: ' + error.message);
+    } finally {
+      setOrdersLoading(false);
     }
   };
 
@@ -75,11 +93,23 @@ const AdminDashboard = () => {
   const toggleCustomerStatus = async (customerId, newStatus) => {
     try {
       await customerService.updateCustomerStatus(customerId, newStatus, token);
-      alert(`Customer ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+      toast.success(`Customer ${newStatus ? 'activated' : 'deactivated'} successfully!`);
       // Refresh customers list
       fetchCustomers();
     } catch (error) {
-      alert('Error updating customer status: ' + error.message);
+      toast.error('Error updating customer status: ' + error.message);
+    }
+  };
+
+  // Update order status
+  const updateOrderStatus = async (orderId, newStatus) => {
+    try {
+      await orderService.updateOrderStatus(orderId, newStatus, token);
+      toast.success(`Order status updated to ${newStatus} successfully!`);
+      // Refresh orders list
+      fetchOrders();
+    } catch (error) {
+      toast.error('Error updating order status: ' + error.message);
     }
   };
 
@@ -134,11 +164,11 @@ const AdminDashboard = () => {
       };
       
       await productService.updateProduct(productId, productData, token);
-      alert('Product updated successfully!');
+      toast.success('Product updated successfully!');
       cancelEdit();
       fetchProducts();
     } catch (error) {
-      alert('Error updating product: ' + error.message);
+      toast.error('Error updating product: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -168,9 +198,9 @@ const AdminDashboard = () => {
       hideDeleteConfirmation();
       fetchProducts();
       // Show success message
-      alert('Product deleted successfully!');
+      toast.success('Product deleted successfully!');
     } catch (error) {
-      alert('Error deleting product: ' + error.message);
+      toast.error('Error deleting product: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -180,7 +210,7 @@ const AdminDashboard = () => {
   const handleEditImageChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length < 1) {
-      alert('Please select at least 1 image');
+      toast.warning('Please select at least 1 image');
       return;
     }
     
@@ -193,13 +223,15 @@ const AdminDashboard = () => {
       fetchProducts();
     } else if (activeTab === 'customers') {
       fetchCustomers();
+    } else if (activeTab === 'orders') {
+      fetchOrders();
     }
   }, [activeTab]);
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length < 1) {
-      alert('Please select at least 1 image');
+      toast.warning('Please select at least 1 image');
       return;
     }
     setProductForm(prev => ({ ...prev, images: files }));
@@ -208,7 +240,7 @@ const AdminDashboard = () => {
   const handleProductSubmit = async (e) => {
     e.preventDefault();
     if (productForm.images.length < 1) {
-      alert('Please select at least 1 image');
+      toast.warning('Please select at least 1 image');
       return;
     }
     
@@ -228,7 +260,7 @@ const AdminDashboard = () => {
       };
       
       await productService.createProduct(productData, token);
-      alert('Product added successfully!');
+      toast.success('Product added successfully!');
       setProductForm({ name: '', description: '', price: '', quantity: '', category: 'candles', images: [] });
       
       // Reset file input
@@ -240,7 +272,7 @@ const AdminDashboard = () => {
         fetchProducts();
       }
     } catch (error) {
-      alert('Error adding product: ' + error.message);
+      toast.error('Error adding product: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -694,10 +726,92 @@ const AdminDashboard = () => {
       case 'orders':
         return (
           <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-6">Order Management</h3>
-            <p className="text-gray-600">Order management interface will be implemented here.</p>
-          </div>
-        );
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-medium text-gray-900">Order Management</h3>
+              <div className="text-sm text-gray-500">
+                Total Orders: {orders.length}
+              </div>
+            </div>
+            
+            {ordersLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : orders.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No orders found</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {orders.map((order) => (
+                      <tr key={order._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          #{order._id.slice(-8)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{order.customerDetails?.name || 'N/A'}</div>
+                          <div className="text-sm text-gray-500">{order.customerDetails?.email || 'N/A'}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900">
+                            {order.items?.length || 0} item(s)
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {order.items?.slice(0, 2).map(item => item.name).join(', ')}
+                            {order.items?.length > 2 && '...'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          ₹{order.totalAmount?.toFixed(2) || '0.00'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            order.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
+                            order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                            order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Unknown'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {new Date(order.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <select
+                            value={order.status}
+                            onChange={(e) => updateOrderStatus(order._id, e.target.value)}
+                            className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          >
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+             )}
+           </div>
+         );
       case 'customers':
         return (
           <div className="bg-white rounded-lg shadow p-6">

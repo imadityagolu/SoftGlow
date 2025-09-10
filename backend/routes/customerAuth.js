@@ -5,13 +5,25 @@ const {
   loginCustomer,
   getCustomerProfile,
   updateCustomerProfile,
-  logoutCustomer
+  logoutCustomer,
+  googleAuthCallback
 } = require('../controllers/customerAuthController');
 const { protectCustomer } = require('../middleware/auth');
+const passport = require('passport');
 
 // Public routes
 router.post('/register', registerCustomer);
 router.post('/login', loginCustomer);
+
+// Google OAuth routes
+router.get('/google', passport.authenticate('google', {
+  scope: ['profile', 'email']
+}));
+
+router.get('/google/callback', 
+  passport.authenticate('google', { failureRedirect: `${process.env.FRONTEND_URL}/customer/login?error=oauth_failed` }),
+  googleAuthCallback
+);
 
 // Protected routes (require authentication)
 router.get('/profile', protectCustomer, getCustomerProfile);

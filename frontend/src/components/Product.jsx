@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import ProductService from '../services/productService';
 import { getImageUrl } from '../utils/imageUtils';
 import { useAuth } from '../contexts/AuthContext';
@@ -109,14 +110,14 @@ const Product = () => {
     try {
       setAddingToCart(true);
       await addToCart(product.id, quantity);
-      alert(`Added ${quantity} ${product.name}(s) to cart!`);
+      toast.success(`Added ${quantity} ${product.name}(s) to cart!`);
     } catch (error) {
       console.error('Error adding to cart:', error);
       if (error.response?.status === 401) {
         // Token expired or invalid, redirect to login
         navigate('/customer/login');
       } else {
-        alert('Failed to add product to cart. Please try again.');
+        toast.error('Failed to add product to cart. Please try again.');
       }
     } finally {
       setAddingToCart(false);

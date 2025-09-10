@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import cartService from '../services/cartService';
 import { useAuth } from './AuthContext';
 
@@ -16,11 +16,13 @@ export const CartProvider = ({ children }) => {
   const [cartItemCount, setCartItemCount] = useState(0);
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const { isAuthenticated, isCustomer, user, userType, token } = useAuth();
+  const { token, user, userType } = useAuth();
+  const fetchingRef = useRef(false);
 
   // Fetch cart data
   const fetchCart = useCallback(async () => {
-    if (token && user && userType === 'customer') {
+    if (token && user && userType === 'customer' && !fetchingRef.current) {
+      fetchingRef.current = true;
       try {
         setLoading(true);
         const response = await cartService.getCart();
@@ -35,14 +37,18 @@ export const CartProvider = ({ children }) => {
         }
       } catch (error) {
         console.error('Error fetching cart:', error);
+        // Don't retry on network errors to prevent infinite loops
         setCartItemCount(0);
         setCartItems([]);
       } finally {
         setLoading(false);
+        fetchingRef.current = false;
       }
-    } else {
+    } else if (!token || !user || userType !== 'customer') {
       setCartItemCount(0);
       setCartItems([]);
+      setLoading(false);
+      fetchingRef.current = false;
     }
   }, [token, user, userType]);
 
