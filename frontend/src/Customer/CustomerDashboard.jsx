@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
+import { useFavorites } from '../contexts/FavoritesContext';
 import customerService from '../services/customerService';
 import orderService from '../services/orderService';
 import { getImageUrl } from '../utils/imageUtils';
 import { toast } from 'react-toastify';
+import NotificationSection from '../components/NotificationSection';
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
@@ -13,7 +15,8 @@ const CustomerDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { logout, user, token, login } = useAuth();
-  const { cartItems, loading: cartLoading, updateCartItem, removeFromCart, clearCart, fetchCart } = useCart();
+  const { cartItems, loading: cartLoading, updateCartItem, removeFromCart, clearCart, fetchCart, addToCart } = useCart();
+  const { favorites, loading: favoritesLoading, fetchFavorites, removeFromFavorites: removeFavorite, addToFavorites } = useFavorites();
   const [profileData, setProfileData] = useState({
     firstName: '',
     lastName: '',
@@ -114,6 +117,13 @@ const CustomerDashboard = () => {
       fetchCart();
     }
   }, [activeTab, fetchCart]);
+
+  // Fetch favorites when favorites tab is active
+  useEffect(() => {
+    if (activeTab === 'favorites') {
+      fetchFavorites();
+    }
+  }, [activeTab, fetchFavorites]);
 
   // Handle profile form changes
   const handleProfileChange = (e) => {
@@ -301,17 +311,27 @@ const CustomerDashboard = () => {
     }
   };
 
-  const recentOrders = [
-    { id: '#001', product: 'Vanilla Candle Set', date: '2024-01-15', amount: '$89.99', status: 'Delivered' },
-    { id: '#002', product: 'Lavender Aromatherapy', date: '2024-01-10', amount: '$45.50', status: 'Shipped' },
-    { id: '#003', product: 'Citrus Collection', date: '2024-01-05', amount: '$120.00', status: 'Processing' }
-  ];
+  // Handle removing item from favorites
+  const handleRemoveFromFavorites = async (productId) => {
+    try {
+      await removeFavorite(productId);
+      toast.success('Removed from favorites');
+    } catch (error) {
+      console.error('Error removing from favorites:', error);
+      toast.error('Failed to remove from favorites');
+    }
+  };
 
-  const favoriteProducts = [
-    { name: 'Rose Garden Candles', price: '$67.25', image: '🌹' },
-    { name: 'Ocean Breeze Set', price: '$89.99', image: '🌊' },
-    { name: 'Vanilla Dreams', price: '$45.50', image: '🍦' }
-  ];
+  // Handle adding item to cart from favorites
+  const handleAddToCartFromFavorites = async (product) => {
+    try {
+      await addToCart(product._id, 1);
+      toast.success('Added to cart successfully');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      toast.error('Failed to add to cart');
+    }
+  };
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -334,74 +354,9 @@ const CustomerDashboard = () => {
               <p className="text-orange-100">Discover our latest candle collections and enjoy the perfect ambiance.</p>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <span className="text-2xl">📦</span>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Orders</p>
-                    <p className="text-2xl font-bold text-gray-900">12</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <span className="text-2xl">💰</span>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Total Spent</p>
-                    <p className="text-2xl font-bold text-gray-900">$1,234</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <span className="text-2xl">⭐</span>
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Loyalty Points</p>
-                    <p className="text-2xl font-bold text-gray-900">850</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Recent Orders */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Recent Orders</h3>
-              </div>
-              <div className="p-6">
-                <div className="space-y-4">
-                  {recentOrders.map((order) => (
-                    <div key={order.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                          <span className="text-xl">🕯️</span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{order.product}</p>
-                          <p className="text-sm text-gray-500">Order {order.id} • {order.date}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium text-gray-900">{order.amount}</p>
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
-                          {order.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            {/* Notification Section */}
+            <NotificationSection userId={user?._id} userType="Customer" />
+            
           </div>
         );
       case 'orders':
@@ -426,10 +381,9 @@ const CustomerDashboard = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order #</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     </tr>
@@ -437,12 +391,19 @@ const CustomerDashboard = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {orders.map((order) => (
                       <tr key={order._id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{order.orderNumber}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {order.orderNumber}
+                          <br/>
+                          <span style={{color:'#ccc'}}>{new Date(order.orderDate).toLocaleDateString('en-IN', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}</span>
+                        </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
                           <div className="flex items-center space-x-3">
                             {order.items.length > 0 && (
                               <>
-                                
                                 <div>
                                   <div className="text-sm font-medium text-gray-900">
                                     {order.items[0].product?.name || order.items[0].name}
@@ -467,13 +428,6 @@ const CustomerDashboard = () => {
                             )}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {new Date(order.orderDate).toLocaleDateString('en-IN', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">₹{order.totalAmount}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
@@ -494,24 +448,61 @@ const CustomerDashboard = () => {
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Favorite Products</h3>
             </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {favoriteProducts.map((product, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div className="text-center">
-                      <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-2xl">{product.image}</span>
-                      </div>
-                      <h4 className="font-medium text-gray-900 mb-2">{product.name}</h4>
-                      <p className="text-orange-600 font-bold mb-4">{product.price}</p>
-                      <button className="w-full bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors">
-                        Add to Cart
-                      </button>
-                    </div>
-                  </div>
-                ))}
+            {favoritesLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
+                <span className="ml-2 text-gray-600">Loading favorites...</span>
               </div>
-            </div>
+            ) : favorites.length === 0 ? (
+              <div className="text-center py-8">
+                <span className="text-4xl mb-4 block">❤️</span>
+                <p className="text-gray-500 mb-4">No favorite products yet</p>
+                <p className="text-sm text-gray-400">Start adding products to your favorites to see them here.</p>
+              </div>
+            ) : (
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {favorites.map((favorite) => {
+                    const product = favorite.productId || favorite.product;
+                    return (
+                      <div key={favorite._id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div className="text-center">
+                          <div className="w-20 h-20 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-4 overflow-hidden">
+                            {product && product.images && product.images.length > 0 ? (
+                              <img 
+                                src={getImageUrl(product.images[0])} 
+                                alt={product.name}
+                                className="w-full h-full object-cover rounded-lg"
+                              />
+                            ) : (
+                              <span className="text-2xl">🕯️</span>
+                            )}
+                          </div>
+                          <h4 className="font-medium text-gray-900 mb-2">{product?.name || 'Product Name'}</h4>
+                          <p className="text-orange-600 font-bold mb-4">₹{product?.price || '0'}</p>
+                          <div className=" space-y-2">
+                            <button 
+                              onClick={() => handleRemoveFromFavorites(product?._id)}
+                              className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors text-sm"
+                            >
+                              Remove from Favorites
+                            </button>
+                            {product?._id && (
+                              <Link 
+                                to={`/product/${product._id}`}
+                                className="block w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors text-center text-sm"
+                              >
+                                View Product
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         );
       case 'profile':
@@ -817,7 +808,7 @@ const CustomerDashboard = () => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={handleLogout}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors cursor-pointer"
               >
                 Logout
               </button>
@@ -833,7 +824,10 @@ const CustomerDashboard = () => {
           <div className={`${sidebarOpen ? 'fixed inset-y-0 left-0 transform translate-x-0' : 'fixed inset-y-0 left-0 transform -translate-x-full'} lg:relative lg:translate-x-0 lg:block w-64 bg-white lg:rounded-lg shadow-lg lg:mr-8 z-30 lg:z-auto transition-transform duration-300 ease-in-out`}>
             {/* Mobile header with close button */}
             <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-orange-50 to-amber-50">
-              <h2 className="text-lg font-semibold text-gray-900">SoftGlow {user?.firstName || ''}</h2>
+              <div style={{display:'flex', alignItems:'center'}}>
+                <span className="text-2xl">🕯️</span>
+                <h2 className="text-lg font-semibold text-gray-900">SoftGlow</h2>
+              </div>
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-white transition-colors"

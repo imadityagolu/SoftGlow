@@ -384,7 +384,7 @@ const Home = () => {
             <div>
               <h2 className="text-4xl font-bold text-gray-900 mb-6">About SoftGlow</h2>
               <p className="text-lg text-gray-600 mb-6">
-                For over a decade, SoftGlow has been crafting premium candles that transform spaces and create unforgettable moments. Our artisans carefully select the finest waxes and fragrances to ensure each candle delivers an exceptional experience.
+                For over a years, SoftGlow has been crafting premium candles that transform spaces and create unforgettable moments. Our artisans carefully select the finest waxes and fragrances to ensure each candle delivers an exceptional experience.
               </p>
               <p className="text-lg text-gray-600 mb-8">
                 From intimate dinners to relaxing baths, our candles are designed to enhance life's special moments with beautiful scents and warm, ambient lighting.

@@ -14,6 +14,8 @@ const customerRoutes = require('./routes/customer');
 const uploadRoutes = require('./routes/upload');
 const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/order');
+const notificationRoutes = require('./routes/notification');
+const favoriteRoutes = require('./routes/favorite');
 
 // Increase payload limit for image uploads
 app.use(express.json({ limit: '50mb' }));
@@ -58,6 +60,8 @@ app.use("/api/admin/customers", customerRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/favorites", favoriteRoutes);
 
 //starting server
 app.listen(process.env.PORT, () => console.log(`server - http://localhost:${process.env.PORT}`));

@@ -1,0 +1,163 @@
+.notification-section {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.notification-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.notification-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.unread-badge {
+  background: #ff4757;
+  color: white;
+  border-radius: 50%;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  min-width: 20px;
+  text-align: center;
+}
+
+.mark-all-read-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.mark-all-read-btn:hover {
+  background: #0056b3;
+}
+
+.notification-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.notification-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  transition: background-color 0.2s;
+  border-left: 3px solid transparent;
+}
+
+.notification-item:hover {
+  background: #f8f9fa;
+}
+
+.notification-item.unread {
+  background: #f0f8ff;
+  border-left-color: #007bff;
+}
+
+.notification-content {
+  flex: 1;
+}
+
+.notification-message {
+  margin: 0 0 5px 0;
+  color: #333;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.notification-date {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.mark-read-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+  margin-left: 10px;
+}
+
+.mark-read-btn:hover {
+  background: #1e7e34;
+}
+
+.no-notifications {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.no-notifications p {
+  margin: 0;
+  font-style: italic;
+}
+
+.notification-loading,
+.notification-error {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.notification-error {
+  color: #dc3545;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .notification-section {
+    padding: 15px;
+  }
+  
+  .notification-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .mark-all-read-btn {
+    align-self: flex-end;
+  }
+  
+  .notification-item {
+    padding: 10px;
+  }
+  
+  .notification-message {
+    font-size: 0.9rem;
+  }
+}

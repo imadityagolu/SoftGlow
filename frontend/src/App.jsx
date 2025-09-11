@@ -20,12 +20,14 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Import Auth Context
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
+import { FavoritesProvider } from './contexts/FavoritesContext';
 
 function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <Router>
+        <FavoritesProvider>
+          <Router>
         <div className="App">
           <Routes>
             {/* Home Route */}
@@ -58,7 +60,8 @@ function App() {
             <Route path="*" element={<Home />} />
           </Routes>
       </div>
-    </Router>
+          </Router>
+        </FavoritesProvider>
       </CartProvider>
       <ToastContainer
         position="top-right"

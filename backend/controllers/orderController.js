@@ -2,8 +2,10 @@ const Order = require('../models/Order');
 const Cart = require('../models/Cart');
 const Customer = require('../models/Customer');
 const Product = require('../models/Product');
+const Admin = require('../models/Admin');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const { createNotification } = require('./notificationController');
 
 // Initialize Razorpay
 const razorpay = new Razorpay({
@@ -268,6 +270,33 @@ const verifyPaymentAndCreateOrder = async (req, res) => {
 
     await order.save();
 
+    // Create notifications for customer and admin
+    try {
+      // Customer notification
+      await createNotification({
+        message: `Your order #${order.orderNumber} has been placed successfully`,
+        type: 'order',
+        userId: customerId,
+        userType: 'Customer',
+        orderId: order._id
+      });
+
+      // Admin notification - get first admin
+      const admin = await Admin.findOne();
+      if (admin) {
+        await createNotification({
+          message: `New order #${order.orderNumber} has been placed by ${customer.firstName} ${customer.lastName}`,
+          type: 'order',
+          userId: admin._id,
+          userType: 'Admin',
+          orderId: order._id
+        });
+      }
+    } catch (notificationError) {
+      console.error('Error creating notifications:', notificationError);
+      // Don't fail the order if notification creation fails
+    }
+
     // Update product quantities
     for (const item of cart.items) {
       await Product.findByIdAndUpdate(
@@ -420,7 +449,7 @@ const updateOrderStatus = async (req, res) => {
     const { orderId } = req.params;
     const { status, notes } = req.body;
 
-    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
@@ -429,7 +458,7 @@ const updateOrderStatus = async (req, res) => {
     if (notes) {
       updateData.notes = notes;
     }
-    if (status === 'delivered') {
+    if (status === 'delivered' || status === 'completed') {
       updateData.deliveryDate = new Date();
     }
 
@@ -441,6 +470,30 @@ const updateOrderStatus = async (req, res) => {
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Create notification for customer about order status update
+    try {
+      const statusMessages = {
+        pending: 'Your order is pending confirmation',
+        confirmed: 'Your order has been confirmed and is being prepared',
+        processing: 'Your order is currently being processed',
+        shipped: 'Your order has been shipped and is on its way',
+        delivered: 'Your order has been delivered successfully',
+        completed: 'Your order has been completed successfully',
+        cancelled: 'Your order has been cancelled'
+      };
+
+      await createNotification({
+        message: `Order #${order.orderNumber} status updated: ${statusMessages[status]}`,
+        type: 'order',
+        userId: order.customer._id,
+        userType: 'Customer',
+        orderId: order._id
+      });
+    } catch (notificationError) {
+      console.error('Error creating notification:', notificationError);
+      // Don't fail the order update if notification creation fails
     }
 
     res.status(200).json({

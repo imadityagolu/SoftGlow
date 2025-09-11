@@ -5,6 +5,7 @@ import ProductService from '../services/productService';
 import { getImageUrl } from '../utils/imageUtils';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
+import favoriteService from '../services/favoriteService';
 import Header from './Header';
 import Footer from './Footer';
 
@@ -19,6 +20,8 @@ const Product = () => {
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState(null);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [addingToFavorites, setAddingToFavorites] = useState(false);
 
   // Fetch product details
   useEffect(() => {
@@ -59,6 +62,22 @@ const Product = () => {
       fetchProduct();
     }
   }, [id]);
+
+  // Check if product is in favorites
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (product && isAuthenticated() && isCustomer()) {
+        try {
+          const response = await favoriteService.checkFavoriteStatus(product.id);
+          setIsFavorite(response.isFavorite);
+        } catch (error) {
+          console.error('Error checking favorite status:', error);
+        }
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [product, isAuthenticated, isCustomer]);
 
   // Auto slideshow for multiple images
   useEffect(() => {
@@ -121,6 +140,38 @@ const Product = () => {
       }
     } finally {
       setAddingToCart(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    // Check if user is authenticated as customer
+    if (!isAuthenticated() || !isCustomer()) {
+      // Redirect to customer login page
+      navigate('/customer/login');
+      return;
+    }
+
+    try {
+      setAddingToFavorites(true);
+      if (isFavorite) {
+        await favoriteService.removeFromFavorites(product.id);
+        setIsFavorite(false);
+        toast.success('Removed from favorites!');
+      } else {
+        await favoriteService.addToFavorites(product.id);
+        setIsFavorite(true);
+        toast.success('Added to favorites!');
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      if (error.response?.status === 401) {
+        // Token expired or invalid, redirect to login
+        navigate('/customer/login');
+      } else {
+        toast.error('Failed to update favorites. Please try again.');
+      }
+    } finally {
+      setAddingToFavorites(false);
     }
   };
 
@@ -312,13 +363,31 @@ const Product = () => {
 
             {/* Action Buttons */}
             <div className="space-y-4">
-              <button
-                onClick={handleAddToCart}
-                disabled={product.quantity === 0 || addingToCart}
-                className="w-full bg-amber-600 text-white py-4 rounded-lg font-medium hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {addingToCart ? 'Adding to Cart...' : 'Add to Cart'}
-              </button>
+              <div className="flex space-x-3">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={product.quantity === 0 || addingToCart}
+                  className="flex-1 bg-amber-600 text-white py-4 rounded-lg font-medium hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {addingToCart ? 'Adding to Cart...' : 'Add to Cart'}
+                </button>
+                <button
+                  onClick={handleToggleFavorite}
+                  disabled={addingToFavorites}
+                  className={`px-6 py-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isFavorite 
+                      ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                  title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  {addingToFavorites ? (
+                    <span className="animate-spin">⏳</span>
+                  ) : (
+                    <span className="text-xl">{isFavorite ? '❤️' : '🤍'}</span>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Additional Info */}

@@ -19,20 +19,19 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-bold mb-4">Quick Links</h3>
             <ul className="space-y-2 text-gray-400">
-              <li><a href="#" className="hover:text-white transition-colors">Home</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Products</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">About</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
+              <li><Link to="/" className="hover:text-white transition-colors">Home</Link></li>
+              <li><Link to="/all-products" className="hover:text-white transition-colors">Products</Link></li>
+              <li><Link to="/" className="hover:text-white transition-colors">About</Link></li>
+              <li><Link to="/" className="hover:text-white transition-colors">Contact</Link></li>
             </ul>
           </div>
           
           <div>
             <h3 className="text-lg font-bold mb-4">Customer Care</h3>
             <ul className="space-y-2 text-gray-400">
-              <li><Link to="/customer/login" className="hover:text-white transition-colors">My Account</Link></li>
-              <li><a href="#" className="hover:text-white transition-colors">Shipping Info</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">Returns</a></li>
-              <li><a href="#" className="hover:text-white transition-colors">FAQ</a></li>
+              <li><Link to="/customer/dashboard" className="hover:text-white transition-colors">My Account</Link></li>
+              <li><Link to="/" className="hover:text-white transition-colors">Returns</Link></li>
+              <li><Link to="/" className="hover:text-white transition-colors">FAQ</Link></li>
             </ul>
           </div>
           
@@ -40,8 +39,9 @@ const Footer = () => {
             <h3 className="text-lg font-bold mb-4">Contact Info</h3>
             <div className="space-y-2 text-gray-400">
               <p>📍 Ranchi, Jharkhand</p>
-              <p>📞 (+91) </p>
-              <p>✉️ @gmail.com</p>
+              <p>📲 (+91) </p>
+              <p><a href="mailto:@gmail.com" className="hover:text-white transition-colors">📬 softglow@gmail.com</a></p>
+              <p><a href="https://www.instagram.com/_.softglow/" target='_blank' className="hover:text-white transition-colors">🔗 follow us</a></p>
             </div>
           </div>
         </div>

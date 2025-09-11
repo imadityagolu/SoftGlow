@@ -6,6 +6,7 @@ import productService from '../services/productService';
 import customerService from '../services/customerService';
 import orderService from '../services/orderService';
 import { getImageUrl } from '../utils/imageUtils';
+import NotificationSection from '../components/NotificationSection';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -279,17 +280,10 @@ const AdminDashboard = () => {
   };
 
   const stats = [
-    { title: 'Total Products', value: '156', change: '+12%', color: 'text-green-600' },
-    { title: 'Total Orders', value: '2,847', change: '+8%', color: 'text-green-600' },
-    { title: 'Total Customers', value: '1,234', change: '+15%', color: 'text-green-600' },
+    { title: 'Total Products', value: `${products.length}`, change: '+12%', color: 'text-green-600' },
+    { title: 'Total Orders', value: `${orders.length}`, change: '+8%', color: 'text-green-600' },
+    { title: 'Total Customers', value: `${customers.length}`, change: '+15%', color: 'text-green-600' },
     { title: 'Revenue', value: '$45,678', change: '+23%', color: 'text-green-600' }
-  ];
-
-  const recentOrders = [
-    { id: '#001', customer: 'John Doe', product: 'Vanilla Candle Set', amount: '$89.99', status: 'Completed' },
-    { id: '#002', customer: 'Jane Smith', product: 'Lavender Aromatherapy', amount: '$45.50', status: 'Processing' },
-    { id: '#003', customer: 'Mike Johnson', product: 'Citrus Collection', amount: '$120.00', status: 'Shipped' },
-    { id: '#004', customer: 'Sarah Wilson', product: 'Rose Garden Candles', amount: '$67.25', status: 'Pending' }
   ];
 
   const getStatusColor = (status) => {
@@ -307,6 +301,7 @@ const AdminDashboard = () => {
       case 'overview':
         return (
           <div className="space-y-6">
+            
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {stats.map((stat, index) => (
@@ -324,47 +319,17 @@ const AdminDashboard = () => {
               ))}
             </div>
 
-            {/* Recent Orders */}
-            <div className="bg-white rounded-lg shadow">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-medium text-gray-900">Recent Orders</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {recentOrders.map((order) => (
-                      <tr key={order.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{order.id}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.customer}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.product}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.amount}</td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
-                            {order.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            {/* Notification Section */}
+            <NotificationSection userId={user?._id} userType="Admin" />
+
           </div>
         );
+
       case 'products':
         return (
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-medium text-gray-900">Product Management</h3>
+              <h3 className="text-lg font-medium text-gray-900">Products: {products.length}</h3>
               <button 
                 onClick={() => setActiveTab('add-product')}
                 className="bg-amber-600 text-white px-4 py-2 rounded-lg hover:bg-amber-700 transition-colors"
@@ -453,16 +418,11 @@ const AdminDashboard = () => {
             )}
           </div>
         );
+
       case 'add-product':
         return (
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center mb-6">
-              <button 
-                onClick={() => setActiveTab('products')}
-                className="mr-4 text-gray-600 hover:text-gray-800"
-              >
-                ← Back to Products
-              </button>
               <h3 className="text-lg font-medium text-gray-900">Add New Product</h3>
             </div>
             
@@ -589,6 +549,7 @@ const AdminDashboard = () => {
             </form>
           </div>
         );
+
       case 'edit-product':
         return (
           <div className="bg-white rounded-lg shadow p-6">
@@ -723,6 +684,7 @@ const AdminDashboard = () => {
             </form>
           </div>
         );
+
       case 'orders':
         return (
           <div className="bg-white rounded-lg shadow p-6">
@@ -751,7 +713,6 @@ const AdminDashboard = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
@@ -759,19 +720,23 @@ const AdminDashboard = () => {
                     {orders.map((order) => (
                       <tr key={order._id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          #{order._id.slice(-8)}
+                          {order.orderNumber}
+                          <br/>
+                          {new Date(order.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{order.customerDetails?.name || 'N/A'}</div>
-                          <div className="text-sm text-gray-500">{order.customerDetails?.email || 'N/A'}</div>
+                          <div className="text-sm text-gray-900">{order.customerName || 'N/A'}</div>
+                          <div className="text-sm text-gray-900">{order.customerPhone || 'N/A'}</div>
+                          <div className="text-sm text-gray-500">{order.customerEmail || 'N/A'}</div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
-                            {order.items?.length || 0} item(s)
-                          </div>
+                          
                           <div className="text-xs text-gray-500">
                             {order.items?.slice(0, 2).map(item => item.name).join(', ')}
                             {order.items?.length > 2 && '...'}
+                          </div>
+                          <div className="text-sm text-gray-900">
+                            x {order.items?.length || 0}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -787,9 +752,6 @@ const AdminDashboard = () => {
                           }`}>
                             {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Unknown'}
                           </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(order.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <select
@@ -812,11 +774,12 @@ const AdminDashboard = () => {
              )}
            </div>
          );
+
       case 'customers':
         return (
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-medium text-gray-900">Customer Management</h3>
+              <h3 className="text-lg font-medium text-gray-900">Customer: {customers.length}</h3>
             </div>
             
             {loading ? (
@@ -834,8 +797,7 @@ const AdminDashboard = () => {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -846,25 +808,23 @@ const AdminDashboard = () => {
                       <tr key={customer._id}>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center">
-                                <span className="text-amber-600 font-medium text-sm">
-                                  {customer.firstName?.charAt(0)}{customer.lastName?.charAt(0)}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="ml-4">
+                            <div className="">
                               <div className="text-sm font-medium text-gray-900">
                                 {customer.firstName} {customer.lastName}
+                                <br/>
+                                {customer.email}
+                                <br/>
+                                {customer.phone || 'N/A'}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {customer.email}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {customer.phone || 'N/A'}
+                          {customer.address?.street || 'N/A'}
+                          <br/>
+                          {customer.address?.city || 'N/A'}, {customer.address?.state || 'N/A'}-{customer.address?.zipCode || 'N/A'}
+                          <br/>
+                          {customer.address?.country || 'N/A'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {new Date(customer.createdAt).toLocaleDateString()}
@@ -877,7 +837,6 @@ const AdminDashboard = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button className="text-amber-600 hover:text-amber-900 mr-3">View</button>
                           <button 
                             onClick={() => toggleCustomerStatus(customer._id, !customer.isActive)}
                             className={`${customer.isActive ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'}`}
