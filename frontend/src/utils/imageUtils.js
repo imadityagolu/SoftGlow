@@ -8,7 +8,7 @@ export const getImageUrl = (imagePath) => {
   }
   
   // If it's a relative path, prepend the backend URL
-  const backendUrl = 'http://localhost:8827';
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8827';
   return `${backendUrl}${imagePath}`;
 };
 

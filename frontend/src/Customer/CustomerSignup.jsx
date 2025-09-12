@@ -256,7 +256,7 @@ const CustomerSignup = () => {
             <div>
               <button
                 type="button"
-                onClick={() => window.location.href = 'http://localhost:8827/api/customer/auth/google'}
+                onClick={() => window.location.href = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8827'}/api/customer/auth/google`}
                 className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors"
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
