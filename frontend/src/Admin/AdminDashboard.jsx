@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import productService from '../services/productService';
 import customerService from '../services/customerService';
 import orderService from '../services/orderService';
+import adminStatsService from '../services/adminStatsService';
 import { getImageUrl } from '../utils/imageUtils';
 import NotificationSection from '../components/NotificationSection';
 
@@ -18,6 +19,19 @@ const AdminDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [adminStats, setAdminStats] = useState({
+    totalProducts: 0,
+    totalOrders: 0,
+    totalCustomers: 0,
+    totalRevenue: 0,
+    changes: {
+      productChange: '+0%',
+      orderChange: '+0%',
+      customerChange: '+0%',
+      revenueChange: '+0%'
+    }
+  });
   const [editingProduct, setEditingProduct] = useState(null);
   const [editForm, setEditForm] = useState({
     name: '',
@@ -87,6 +101,22 @@ const AdminDashboard = () => {
       toast.error('Error fetching orders: ' + error.message);
     } finally {
       setOrdersLoading(false);
+    }
+  };
+
+  // Fetch admin statistics
+  const fetchAdminStats = async () => {
+    try {
+      setStatsLoading(true);
+      const response = await adminStatsService.getAdminStats(token);
+      if (response.success) {
+        setAdminStats(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching admin stats:', error);
+      toast.error('Error fetching statistics: ' + error.message);
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -220,7 +250,9 @@ const AdminDashboard = () => {
 
   // Fetch data when component mounts or when switching tabs
   useEffect(() => {
-    if (activeTab === 'products') {
+    if (activeTab === 'overview') {
+      fetchAdminStats();
+    } else if (activeTab === 'products') {
       fetchProducts();
     } else if (activeTab === 'customers') {
       fetchCustomers();
@@ -280,10 +312,30 @@ const AdminDashboard = () => {
   };
 
   const stats = [
-    { title: 'Total Products', value: `${products.length}`, change: '+12%', color: 'text-green-600' },
-    { title: 'Total Orders', value: `${orders.length}`, change: '+8%', color: 'text-green-600' },
-    { title: 'Total Customers', value: `${customers.length}`, change: '+15%', color: 'text-green-600' },
-    { title: 'Revenue', value: '$45,678', change: '+23%', color: 'text-green-600' }
+    { 
+      title: 'Total Products', 
+      value: statsLoading ? 'Loading...' : adminStats.totalProducts.toLocaleString(), 
+      change: adminStats.changes.productChange, 
+      color: 'text-green-600' 
+    },
+    { 
+      title: 'Total Customers', 
+      value: statsLoading ? 'Loading...' : adminStats.totalCustomers.toLocaleString(), 
+      change: adminStats.changes.customerChange, 
+      color: 'text-green-600' 
+    },
+    { 
+      title: 'Total Orders', 
+      value: statsLoading ? 'Loading...' : adminStats.totalOrders.toLocaleString(), 
+      change: adminStats.changes.orderChange, 
+      color: 'text-green-600' 
+    },
+    { 
+      title: 'Revenue', 
+      value: statsLoading ? 'Loading...' : `₹${adminStats.totalRevenue.toLocaleString()}`, 
+      change: adminStats.changes.revenueChange, 
+      color: 'text-green-600' 
+    }
   ];
 
   const getStatusColor = (status) => {
@@ -689,10 +741,7 @@ const AdminDashboard = () => {
         return (
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-medium text-gray-900">Order Management</h3>
-              <div className="text-sm text-gray-500">
-                Total Orders: {orders.length}
-              </div>
+              <h3 className="text-lg font-medium text-gray-900">Order: {orders.length}</h3>
             </div>
             
             {ordersLoading ? (
@@ -725,12 +774,22 @@ const AdminDashboard = () => {
                           {new Date(order.createdAt).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{order.customerName || 'N/A'}</div>
-                          <div className="text-sm text-gray-900">{order.customerPhone || 'N/A'}</div>
-                          <div className="text-sm text-gray-500">{order.customerEmail || 'N/A'}</div>
+                          <div className="text-sm text-gray-900">{order.customerName || `${order.customer?.firstName || ''} ${order.customer?.lastName || ''}`.trim() || 'N/A'}</div>
+                          <div className="text-sm text-gray-900">{order.customerPhone || order.customer?.phone || 'N/A'}</div>
+                          <div className="text-sm text-gray-500">{order.customerEmail || order.customer?.email || 'N/A'}</div>
+                          <div className="text-sm text-gray-900">
+                            {order.customer?.address ? (
+                              <>
+                                <div>{order.customer.address.street || 'N/A'}</div>
+                                <div>{order.customer.address.city || 'N/A'}, {order.customer.address.state || 'N/A'}</div>
+                                <div>{order.customer.address.zipCode || 'N/A'}, {order.customer.address.country || 'N/A'}</div>
+                              </>
+                            ) : (
+                              <div className="text-gray-500">No address available</div>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4">
-                          
                           <div className="text-xs text-gray-500">
                             {order.items?.slice(0, 2).map(item => item.name).join(', ')}
                             {order.items?.length > 2 && '...'}

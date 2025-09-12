@@ -423,7 +423,7 @@ const getAllOrders = async (req, res) => {
       .sort({ orderDate: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('customer', 'name email phone');
+      .populate('customer', 'firstName lastName email phone address');
 
     const totalOrders = await Order.countDocuments(query);
 

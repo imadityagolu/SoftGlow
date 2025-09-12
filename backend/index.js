@@ -16,6 +16,7 @@ const cartRoutes = require('./routes/cart');
 const orderRoutes = require('./routes/order');
 const notificationRoutes = require('./routes/notification');
 const favoriteRoutes = require('./routes/favorite');
+const adminStatsRoutes = require('./routes/adminStats');
 
 // Increase payload limit for image uploads
 app.use(express.json({ limit: '50mb' }));
@@ -57,6 +58,7 @@ app.use("/api/admin/auth", adminAuthRoutes);
 app.use("/api/customer/auth", customerAuthRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/admin/customers", customerRoutes);
+app.use("/api/admin/stats", adminStatsRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);

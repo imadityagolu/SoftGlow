@@ -38,9 +38,9 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-bold mb-4">Contact Info</h3>
             <div className="space-y-2 text-gray-400">
-              <p>📍 Ranchi, Jharkhand</p>
-              <p>📲 (+91) </p>
-              <p><a href="mailto:@gmail.com" className="hover:text-white transition-colors">📬 softglow@gmail.com</a></p>
+              <p className="hover:text-white transition-colors">📍 Ranchi, Jharkhand</p>
+              <p><a href="https://api.whatsapp.com/send?phone=918083079692" target='_blank' className="hover:text-white transition-colors">📲 WhatsApp</a></p>
+              <p><a href="mailto:adityasng420.ak@gmail.com" className="hover:text-white transition-colors">📬 softglow@gmail.com</a></p>
               <p><a href="https://www.instagram.com/_.softglow/" target='_blank' className="hover:text-white transition-colors">🔗 follow us</a></p>
             </div>
           </div>

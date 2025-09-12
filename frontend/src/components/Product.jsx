@@ -394,11 +394,11 @@ const Product = () => {
             <div className="border-t pt-6 space-y-3">
               <div className="flex items-center space-x-3 text-sm text-gray-600">
                 <span>🚚</span>
-                <span>Free shipping on orders over ₹500</span>
+                <span>Free shipping on orders</span>
               </div>
               <div className="flex items-center space-x-3 text-sm text-gray-600">
                 <span>↩️</span>
-                <span>30-day return policy</span>
+                <span>Return policy</span>
               </div>
               <div className="flex items-center space-x-3 text-sm text-gray-600">
                 <span>🔒</span>
