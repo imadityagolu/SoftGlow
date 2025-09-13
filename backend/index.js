@@ -20,6 +20,7 @@ const orderRoutes = require('./routes/order');
 const notificationRoutes = require('./routes/notification');
 const favoriteRoutes = require('./routes/favorite');
 const adminStatsRoutes = require('./routes/adminStats');
+const contactRoutes = require('./routes/contact');
 
 // Security middleware
 app.use(helmet({
@@ -102,6 +103,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/favorites", favoriteRoutes);
+app.use("/api/contact", contactRoutes);
 
 //starting server
 app.listen(process.env.PORT, () => console.log(`server - http://localhost:${process.env.PORT}`));
