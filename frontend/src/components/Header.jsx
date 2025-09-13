@@ -48,8 +48,6 @@ const Header = () => {
             <Link to="/" className="text-amber-600 font-medium">Home</Link>
             <a href="#products" className="text-gray-700 hover:text-amber-600 transition-colors">Special candles</a>
             <Link to="/all-products" className="text-gray-700 hover:text-amber-600 transition-colors">All products</Link>
-            <a href="#about" className="text-gray-700 hover:text-amber-600 transition-colors">About us</a>
-            <a href="#contact" className="text-gray-700 hover:text-amber-600 transition-colors">Contact</a>
           </div>
           
           <div className="flex items-center space-x-2">

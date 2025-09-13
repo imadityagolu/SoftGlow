@@ -8,6 +8,11 @@ import './App.css';
 import Home from './components/Home';
 import AllProducts from './components/AllProducts';
 import Product from './components/Product';
+import AboutUs from './components/AboutUs';
+import ContactUs from './components/ContactUs';
+import TermsConditions from './components/TermsConditions';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import CancelReturnPolicy from './components/CancelReturnPolicy';
 import AdminLogin from './Admin/AdminLogin';
 import AdminSignup from './Admin/AdminSignup';
 import AdminDashboard from './Admin/AdminDashboard';
@@ -37,11 +42,18 @@ function App() {
             <Route path="/all-products" element={<AllProducts />} />
             <Route path="/product/:id" element={<Product />} />
             
+            {/* Static Pages */}
+            <Route path="/about" element={<AboutUs />} />
+            <Route path="/contact" element={<ContactUs />} />
+            <Route path="/terms-conditions" element={<TermsConditions />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/cancel-return-policy" element={<CancelReturnPolicy />} />
+            
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/signup" element={<AdminSignup />} />
             <Route path="/admin/dashboard" element={
-              <ProtectedRoute requiredUserType="admin">
+              <ProtectedRoute requiredRole="admin">
                 <AdminDashboard />
               </ProtectedRoute>
             } />
@@ -49,9 +61,9 @@ function App() {
             {/* Customer Routes */}
             <Route path="/customer/login" element={<CustomerLogin />} />
           <Route path="/customer/signup" element={<CustomerSignup />} />
-          <Route path="/customer/oauth-success" element={<OAuthSuccess />} />
+          <Route path="/oauth/success" element={<OAuthSuccess />} />
             <Route path="/customer/dashboard" element={
-              <ProtectedRoute requiredUserType="customer">
+              <ProtectedRoute requiredRole="customer">
                 <CustomerDashboard />
               </ProtectedRoute>
             } />

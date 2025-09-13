@@ -21,17 +21,18 @@ const Footer = () => {
             <ul className="space-y-2 text-gray-400">
               <li><Link to="/" className="hover:text-white transition-colors">Home</Link></li>
               <li><Link to="/all-products" className="hover:text-white transition-colors">Products</Link></li>
-              <li><Link to="/" className="hover:text-white transition-colors">About</Link></li>
-              <li><Link to="/" className="hover:text-white transition-colors">Contact</Link></li>
+              <li><Link to="/customer/dashboard" className="hover:text-white transition-colors">My Account</Link></li>
             </ul>
           </div>
           
           <div>
             <h3 className="text-lg font-bold mb-4">Customer Care</h3>
             <ul className="space-y-2 text-gray-400">
-              <li><Link to="/customer/dashboard" className="hover:text-white transition-colors">My Account</Link></li>
-              <li><Link to="/" className="hover:text-white transition-colors">Returns</Link></li>
-              <li><Link to="/" className="hover:text-white transition-colors">FAQ</Link></li>
+              <li><Link to="/about" className="hover:text-white transition-colors">About Us</Link></li>
+              <li><Link to="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
+              <li><Link to="/cancel-return-policy" className="hover:text-white transition-colors">Cancel, Return & Refund</Link></li>
+              <li><Link to="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link to="/terms-conditions" className="hover:text-white transition-colors">Terms & Conditions</Link></li>
             </ul>
           </div>
           
@@ -46,8 +47,10 @@ const Footer = () => {
           </div>
         </div>
         
-        <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
-          <p>&copy; 2025 SoftGlow. All rights reserved.</p>
+        <div className="border-t border-gray-800 mt-12 pt-8">
+          <div className="flex flex-col md:flex-row justify-center items-center text-gray-400">
+            <p className="text-sm mb-4 md:mb-0">&copy; 2025 SoftGlow. All rights reserved.</p>
+          </div>
         </div>
       </div>
     </footer>
