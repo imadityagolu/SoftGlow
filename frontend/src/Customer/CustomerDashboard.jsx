@@ -334,11 +334,12 @@ const CustomerDashboard = () => {
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'Delivered': return 'bg-green-100 text-green-800';
-      case 'Shipped': return 'bg-blue-100 text-blue-800';
-      case 'Processing': return 'bg-yellow-100 text-yellow-800';
-      case 'Cancelled': return 'bg-red-100 text-red-800';
+    switch (status?.toLowerCase()) {
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'shipped': return 'bg-blue-100 text-blue-800';
+      case 'processing': return 'bg-yellow-100 text-yellow-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'pending': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -382,8 +383,7 @@ const CustomerDashboard = () => {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" colSpan="2">Items & Quantities</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     </tr>
@@ -400,38 +400,24 @@ const CustomerDashboard = () => {
                             day: 'numeric'
                           })}</span>
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          <div className="flex items-center space-x-3">
-                            {order.items.length > 0 && (
-                              <>
-                                <div>
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {order.items[0].product?.name || order.items[0].name}
-                                  </div>
-                                  {order.items.length > 1 && (
-                                    <div className="text-xs text-gray-500">+{order.items.length - 1} more items</div>
-                                  )}
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          <div className="max-w-xs">
-                            {order.items.slice(0, 2).map((item, index) => (
-                              <div key={index} className="text-sm">
-                                x {item.quantity}
+                        <td className="px-6 py-4 text-sm text-gray-900" colSpan="2">
+                          <div className="space-y-1">
+                            {order.items.map((item, index) => (
+                              <div key={index} className="flex justify-between items-center">
+                                <span className="text-sm font-medium text-gray-900 truncate mr-2">
+                                  {item.product?.name || item.name}
+                                </span>
+                                <span className="text-sm text-gray-700 font-medium">
+                                  x{item.quantity}
+                                </span>
                               </div>
                             ))}
-                            {order.items.length > 2 && (
-                              <div className="text-xs text-gray-500">+{order.items.length - 2} more items</div>
-                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">₹{order.totalAmount}</td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
-                            {order.status}
+                            {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Unknown'}
                           </span>
                         </td>
                       </tr>

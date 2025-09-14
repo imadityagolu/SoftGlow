@@ -75,9 +75,9 @@ const CustomerLogin = () => {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-orange-100 mb-4">
+          <Link to="/admin/login" className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-orange-100 mb-4">
             <span className="text-2xl">🕯️</span>
-          </div>
+          </Link>
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
             Welcome Back
           </h2>
