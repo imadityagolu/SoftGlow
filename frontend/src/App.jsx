@@ -10,8 +10,8 @@ import AllProducts from './components/AllProducts';
 import Product from './components/Product';
 import AboutUs from './components/AboutUs';
 import ContactUs from './components/ContactUs';
-import TermsConditions from './components/TermsConditions';
 import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsConditions from './components/TermsConditions';
 import CancelReturnPolicy from './components/CancelReturnPolicy';
 import AdminLogin from './Admin/AdminLogin';
 import AdminSignup from './Admin/AdminSignup';
@@ -45,15 +45,15 @@ function App() {
             {/* Static Pages */}
             <Route path="/about" element={<AboutUs />} />
             <Route path="/contact" element={<ContactUs />} />
-            <Route path="/terms-conditions" element={<TermsConditions />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-conditions" element={<TermsConditions />} />
             <Route path="/cancel-return-policy" element={<CancelReturnPolicy />} />
             
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/signup" element={<AdminSignup />} />
             <Route path="/admin/dashboard" element={
-              <ProtectedRoute requiredRole="admin">
+              <ProtectedRoute requiredUserType="admin">
                 <AdminDashboard />
               </ProtectedRoute>
             } />
@@ -61,9 +61,9 @@ function App() {
             {/* Customer Routes */}
             <Route path="/customer/login" element={<CustomerLogin />} />
           <Route path="/customer/signup" element={<CustomerSignup />} />
-          <Route path="/oauth/success" element={<OAuthSuccess />} />
+          <Route path="/customer/oauth-success" element={<OAuthSuccess />} />
             <Route path="/customer/dashboard" element={
-              <ProtectedRoute requiredRole="customer">
+              <ProtectedRoute requiredUserType="customer">
                 <CustomerDashboard />
               </ProtectedRoute>
             } />

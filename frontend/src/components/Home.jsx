@@ -389,12 +389,9 @@ const Home = () => {
               <p className="text-lg text-gray-600 mb-8">
                 From intimate dinners to relaxing baths, our candles are designed to enhance life's special moments with beautiful scents and warm, ambient lighting.
               </p>
-              <Link 
-                to="/about" 
-                className="bg-amber-600 text-white px-8 py-4 rounded-lg font-medium hover:bg-amber-700 transition-colors inline-block"
-              >
+              <button className="bg-amber-600 text-white px-8 py-4 rounded-lg font-medium hover:bg-amber-700 transition-colors">
                 Learn More
-              </Link>
+              </button>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gradient-to-br from-amber-100 to-orange-100 rounded-2xl p-8 text-center">

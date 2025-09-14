@@ -6,17 +6,13 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(),tailwindcss()],
   server: {
-    port: 5174
-  },
-  build: {
-    rollupOptions: {
-      output: {
-        manualChunks: undefined
+    port: 5174,
+    proxy: {
+      '/uploads': {
+        target: 'http://localhost:8827',
+        changeOrigin: true,
+        secure: false
       }
     }
-  },
-  preview: {
-    port: 4173,
-    strictPort: true
   }
 })

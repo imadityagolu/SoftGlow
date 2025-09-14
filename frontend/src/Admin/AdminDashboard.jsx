@@ -790,12 +790,16 @@ const AdminDashboard = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-xs text-gray-500">
-                            {order.items?.slice(0, 2).map(item => item.name).join(', ')}
-                            {order.items?.length > 2 && '...'}
-                          </div>
-                          <div className="text-sm text-gray-900">
-                            x {order.items?.length || 0}
+                          <div className="text-xs text-gray-500 space-y-1">
+                            {order.items?.slice(0, 3).map((item, index) => (
+                              <div key={index} className="flex justify-between">
+                                <span className="truncate mr-2">{item.name}</span>
+                                <span className="text-gray-700 font-medium">x{item.quantity}</span>
+                              </div>
+                            ))}
+                            {order.items?.length > 3 && (
+                              <div className="text-gray-400 text-center">+{order.items.length - 3} more items</div>
+                            )}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -932,10 +936,8 @@ const AdminDashboard = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </button>
-              <Link to="/">
               <span className="text-2xl mr-3">🕯️</span>
               <h1 className="text-2xl font-bold text-gray-900">SoftGlow Admin</h1>
-              </Link>
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-700">Welcome, {user?.firstName || 'Admin'}</span>

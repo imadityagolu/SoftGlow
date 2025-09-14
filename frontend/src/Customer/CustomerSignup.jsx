@@ -200,13 +200,13 @@ const CustomerSignup = () => {
                 />
                 <label htmlFor="agreeToTerms" className="ml-2 block text-sm text-gray-700">
                   I agree to the{' '}
-                  <Link to="/terms-conditions" className="text-orange-600 hover:text-orange-500">
+                  <a href="#" className="text-orange-600 hover:text-orange-500">
                     Terms and Conditions
-                  </Link>{' '}
+                  </a>{' '}
                   and{' '}
-                  <Link to="/privacy-policy" className="text-orange-600 hover:text-orange-500">
+                  <a href="#" className="text-orange-600 hover:text-orange-500">
                     Privacy Policy
-                  </Link>
+                  </a>
                 </label>
               </div>
               {errors.agreeToTerms && (

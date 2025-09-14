@@ -27,7 +27,8 @@ const AllProducts = () => {
         setLoading(true);
         const response = await ProductService.getAllProducts({ 
           sortBy: sortBy, 
-          sortOrder: sortOrder 
+          sortOrder: sortOrder,
+          limit: 50 // Increase limit to show more products
         });
         if (response.success && response.data) {
           // Transform API data to match UI format
@@ -147,7 +148,7 @@ const AllProducts = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             {/* Search */}
-            <div className="flex-1 max-w-md">
+            <div className="w-full md:flex-1 md:max-w-full">
               <input
                 type="text"
                 placeholder="Search candles..."

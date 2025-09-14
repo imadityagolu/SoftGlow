@@ -5,13 +5,27 @@ const Product = require('./models/Product');
 mongoose.connect(process.env.MONGO_URL)
   .then(async () => {
     console.log('Connected to MongoDB');
-    const products = await Product.find().limit(5);
-    console.log('Products found:', products.length);
     
-    if (products.length > 0) {
-      console.log('First product:', JSON.stringify(products[0], null, 2));
-    } else {
-      console.log('No products found in database');
+    // Get all products (including inactive)
+    const allProducts = await Product.find();
+    console.log('Total products found:', allProducts.length);
+    
+    // Get only active products
+    const activeProducts = await Product.find({ isActive: true });
+    console.log('Active products found:', activeProducts.length);
+    
+    // Get inactive products
+    const inactiveProducts = await Product.find({ isActive: false });
+    console.log('Inactive products found:', inactiveProducts.length);
+    
+    // Show all product names and status
+    console.log('\nAll products:');
+    allProducts.forEach((product, index) => {
+      console.log(`${index + 1}. ${product.name} - Active: ${product.isActive}`);
+    });
+    
+    if (allProducts.length > 0) {
+      console.log('\nFirst product details:', JSON.stringify(allProducts[0], null, 2));
     }
     
     process.exit(0);

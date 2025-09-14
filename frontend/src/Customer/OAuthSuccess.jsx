@@ -12,10 +12,10 @@ const OAuthSuccess = () => {
     const userString = searchParams.get('user');
     
     // Debug logging
-    console.log('OAuth Success - Current URL:', window.location.href);
-    console.log('OAuth Success - Token:', token);
-    console.log('OAuth Success - User String:', userString);
-    console.log('OAuth Success - All URL params:', Object.fromEntries(searchParams));
+    // console.log('OAuth Success - Current URL:', window.location.href);
+    // console.log('OAuth Success - Token:', token);
+    // console.log('OAuth Success - User String:', userString);
+    // console.log('OAuth Success - All URL params:', Object.fromEntries(searchParams));
 
     if (token && userString) {
       try {
@@ -31,7 +31,7 @@ const OAuthSuccess = () => {
         navigate('/customer/login?error=oauth_parse_failed');
       }
     } else {
-      console.log('OAuth Success - Missing token or user data, redirecting to login');
+      // console.log('OAuth Success - Missing token or user data, redirecting to login');
       // If no token or user data, redirect immediately
       setTimeout(() => {
         navigate('/customer/login?error=oauth_missing_data');

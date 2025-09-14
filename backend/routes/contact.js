@@ -5,20 +5,17 @@ const {
   getAllContacts,
   getContactById,
   updateContactStatus,
-  deleteContact,
-  getContactStats
+  deleteContact
 } = require('../controllers/contactController');
 const { protectAdmin } = require('../middleware/auth');
 
-// Public route for contact form submission
+// Public route - Submit contact form
 router.post('/', submitContactForm);
 
-// Admin-only routes for contact management
-router.use('/admin', protectAdmin);
-router.get('/admin', getAllContacts);
-router.get('/admin/stats', getContactStats);
-router.get('/admin/:id', getContactById);
-router.put('/admin/:id/status', updateContactStatus);
-router.delete('/admin/:id', deleteContact);
+// Admin routes - Manage contact submissions
+router.get('/', protectAdmin, getAllContacts);
+router.get('/:id', protectAdmin, getContactById);
+router.put('/:id', protectAdmin, updateContactStatus);
+router.delete('/:id', protectAdmin, deleteContact);
 
 module.exports = router;

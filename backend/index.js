@@ -22,35 +22,37 @@ const favoriteRoutes = require('./routes/favorite');
 const adminStatsRoutes = require('./routes/adminStats');
 const contactRoutes = require('./routes/contact');
 
+// CORS configuration - MUST be first to handle preflight requests
+const corsOptions = {
+    origin: [process.env.FRONTEND_URL || 'http://localhost:5174', 'http://localhost:3000'],
+    methods:["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Type', 'Content-Length']
+};
+app.use(cors(corsOptions));
+
 // Security middleware
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:", "http://localhost:5174"],
-    },
-  },
+  contentSecurityPolicy: false, // Temporarily disable CSP to test image loading
 }));
 
 // Compression middleware
 app.use(compression());
 
-// Rate limiting - more permissive for development
+// Rate limiting - more lenient for development
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // 1000 for dev, 100 for production
+  max: 1000, // increased limit for development
   message: {
     error: 'Too many requests from this IP, please try again later.'
   },
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
-    // Skip rate limiting for static files and uploads
-    return req.path.startsWith('/uploads/');
+    // Skip rate limiting for auth routes during development
+    return req.path.includes('/auth/') || process.env.NODE_ENV !== 'production';
   }
 });
 app.use(limiter);
@@ -76,21 +78,18 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-//cors
-const corsOptions = {
-    origin: [process.env.FRONTEND_URL || 'http://localhost:5174', 'http://localhost:3000'],
-    methods:["GET", "POST", "PUT", "PATCH", "DELETE"],
-    credentials: true
-};
-app.use(cors(corsOptions));
+// CORS already configured at the top of the file
 
  //mongoose
 mongoose.connect(process.env.MONGO_URL)
 .then(() => console.log("MongoDB Atlas connected"))
 .catch((error) => console.error(error));
 
-// Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Handle preflight requests for uploads
+app.options('/uploads/*', cors(corsOptions));
+
+// Serve static files from uploads directory with CORS
+app.use('/uploads', cors(corsOptions), express.static(path.join(__dirname, 'uploads')));
 
 //api
 app.use("/api/admin/auth", adminAuthRoutes);

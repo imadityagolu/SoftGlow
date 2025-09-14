@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Image Loading Test</title>
+</head>
+<body>
+    <h1>Image Loading Test</h1>
+    <div id="test-results"></div>
+    
+    <script>
+        const testImages = [
+            '/uploads/images-1757433114709-355565482.jpeg',
+            '/uploads/images-1757432771080-379995280.jpeg',
+            '/uploads/images-1757432905026-804929672.jpeg'
+        ];
+        
+        const resultsDiv = document.getElementById('test-results');
+        
+        testImages.forEach((imageUrl, index) => {
+            const img = new Image();
+            const testDiv = document.createElement('div');
+            testDiv.innerHTML = `<p>Testing image ${index + 1}: ${imageUrl}</p>`;
+            
+            img.onload = function() {
+                testDiv.innerHTML += `<p style="color: green;">✓ Image loaded successfully</p>`;
+                testDiv.appendChild(img);
+                img.style.maxWidth = '200px';
+                img.style.height = 'auto';
+            };
+            
+            img.onerror = function() {
+                testDiv.innerHTML += `<p style="color: red;">✗ Image failed to load</p>`;
+                console.error('Failed to load image:', imageUrl);
+            };
+            
+            resultsDiv.appendChild(testDiv);
+            img.src = imageUrl;
+        });
+    </script>
+</body>
+</html>
