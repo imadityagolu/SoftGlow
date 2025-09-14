@@ -88,8 +88,26 @@ mongoose.connect(process.env.MONGO_URL)
 // Handle preflight requests for uploads
 app.options('/uploads/*', cors(corsOptions));
 
-// Serve static files from uploads directory with CORS
-app.use('/uploads', cors(corsOptions), express.static(path.join(__dirname, 'uploads')));
+// Serve static files from uploads directory with enhanced CORS
+app.use('/uploads', (req, res, next) => {
+  // Set CORS headers explicitly for static files
+  const allowedOrigins = [process.env.FRONTEND_URL || 'http://localhost:5174', 'http://localhost:3000'];
+  const origin = req.headers.origin;
+  
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  next();
+}, express.static(path.join(__dirname, 'uploads')));
+
+// Debug: Log FRONTEND_URL to verify environment variable
+console.log('FRONTEND_URL configured as:', process.env.FRONTEND_URL || 'http://localhost:5174');
+console.log('CORS origins allowed:', [process.env.FRONTEND_URL || 'http://localhost:5174', 'http://localhost:3000']);
 
 //api
 app.use("/api/admin/auth", adminAuthRoutes);

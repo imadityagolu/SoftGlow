@@ -16,7 +16,14 @@ When deployed to production, these localhost URLs are not accessible from the in
 
 ### For Production Deployment (e.g., Render, Vercel, Netlify)
 
-1. **Update Frontend Environment Variables**
+1. **Update Backend Environment Variables for CORS**
+
+   **CRITICAL**: Set the `FRONTEND_URL` environment variable in your backend to allow cross-origin requests:
+   ```
+   FRONTEND_URL=https://your-frontend-app.onrender.com
+   ```
+
+2. **Update Frontend Environment Variables**
    Replace localhost URLs with your actual deployed backend URL:
    ```
    VITE_BACKEND_URL=https://your-backend-app.onrender.com
@@ -29,21 +36,27 @@ When deployed to production, these localhost URLs are not accessible from the in
 
 2. **Platform-Specific Instructions**
 
-   **For Render:**
-   - Go to your frontend service dashboard
-   - Navigate to "Environment" tab
-   - Add/Update: `VITE_BACKEND_URL=https://your-backend-app.onrender.com`
-   - Redeploy the service
+   **Backend (Render):**
+    - Go to your backend service dashboard
+    - Navigate to "Environment" tab
+    - Add/Update: `FRONTEND_URL=https://your-frontend-app.onrender.com`
+    - Redeploy the backend service
 
-   **For Vercel:**
-   - Go to Project Settings → Environment Variables
-   - Add: `VITE_BACKEND_URL=https://your-backend-app.onrender.com`
-   - Redeploy
-
-   **For Netlify:**
-   - Go to Site Settings → Environment Variables
-   - Add: `VITE_BACKEND_URL=https://your-backend-app.onrender.com`
-   - Redeploy
+    **Frontend (Render):**
+    - Go to your frontend service dashboard
+    - Navigate to "Environment" tab
+    - Add/Update: `VITE_BACKEND_URL=https://your-backend-app.onrender.com`
+    - Redeploy the service
+ 
+    **Frontend (Vercel):**
+    - Go to Project Settings → Environment Variables
+    - Add: `VITE_BACKEND_URL=https://your-backend-app.onrender.com`
+    - Redeploy
+ 
+    **Frontend (Netlify):**
+    - Go to Site Settings → Environment Variables
+    - Add: `VITE_BACKEND_URL=https://your-backend-app.onrender.com`
+    - Redeploy
 
 ### Backend CORS Configuration
 
@@ -92,21 +105,35 @@ if (import.meta.env.DEV) {
 }
 ```
 
-## 📋 Deployment Checklist
+## Deployment Checklist
 
 - [ ] Backend deployed and accessible
-- [ ] Backend CORS configured for frontend domain
+- [ ] **CRITICAL**: Backend `FRONTEND_URL` environment variable set to production frontend domain
+- [ ] Backend redeployed with CORS configuration
 - [ ] Frontend `VITE_BACKEND_URL` updated to production backend URL
 - [ ] Frontend redeployed with new environment variables
 - [ ] Test image loading on production site
 - [ ] Verify browser network tab shows correct image URLs
 
-## 🚨 Common Mistakes
+## Common Issues & Troubleshooting
 
 1. **Forgetting to update environment variables** - Most common cause
 2. **CORS not configured** - Backend blocks frontend requests
 3. **Wrong URL format** - Incorrect protocol or malformed URL
 4. **Not redeploying** - Changes don't take effect until redeploy
+5. **Backend not restarted** - Environment variables not loaded
+
+### Debugging Steps
+
+1. **Check backend logs** for CORS configuration:
+   ```
+   FRONTEND_URL configured as: https://your-frontend-app.onrender.com
+   CORS origins allowed: ["https://your-frontend-app.onrender.com", "http://localhost:3000"]
+   ```
+
+2. **Verify environment variables** are set in deployment platform
+3. **Test CORS headers** using browser developer tools
+4. **Ensure both services are redeployed** after environment variable changes
 
 ## 🔗 Example URLs
 
