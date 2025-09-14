@@ -89,7 +89,7 @@ const ContactUs = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8827'}/api/contact`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8827'}/api`}/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
