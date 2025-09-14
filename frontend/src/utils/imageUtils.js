@@ -12,15 +12,8 @@ export const getImageUrl = (imagePath) => {
   if (import.meta.env.DEV) {
     return imagePath; // Use relative path, Vite proxy will handle it
   } else {
-    // Support both VITE_API_URL (new) and VITE_BACKEND_URL (legacy) for backward compatibility
-    let backendUrl;
-    if (import.meta.env.VITE_API_URL) {
-      // Get backend URL from API URL by removing /api suffix
-      backendUrl = import.meta.env.VITE_API_URL.replace('/api', '');
-    } else {
-      // Fallback to legacy VITE_BACKEND_URL
-      backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8827';
-    }
+    // Use VITE_BACKEND_URL for production
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8827';
     return `${backendUrl}${imagePath}`;
   }
 };
