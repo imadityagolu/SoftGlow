@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const upload = require('../middleware/upload');
+const { upload, cloudinary } = require('../middleware/cloudinaryUpload');
 const { protect } = require('../middleware/auth');
 const path = require('path');
 
@@ -16,9 +16,9 @@ router.post('/images', protect, upload.array('images', 10), (req, res) => {
       });
     }
 
-    // Generate URLs for uploaded files
+    // Generate URLs for uploaded files from Cloudinary
     const imageUrls = req.files.map(file => {
-      return `/uploads/${file.filename}`;
+      return file.path; // Cloudinary URL
     });
 
     res.status(200).json({
@@ -49,7 +49,7 @@ router.post('/image', protect, upload.single('image'), (req, res) => {
       });
     }
 
-    const imageUrl = `/uploads/${req.file.filename}`;
+    const imageUrl = req.file.path; // Cloudinary URL
 
     res.status(200).json({
       success: true,
