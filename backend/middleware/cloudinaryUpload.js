@@ -1,5 +1,4 @@
 const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('cloudinary').v2;
 
 // Configure Cloudinary
@@ -9,19 +8,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Configure Cloudinary storage for multer
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'softglow-products', // Folder name in Cloudinary
-    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
-    transformation: [
-      { width: 1000, height: 1000, crop: 'limit' }, // Resize large images
-      { quality: 'auto' }, // Auto optimize quality
-      { fetch_format: 'auto' } // Auto format selection
-    ],
-  },
-});
+// Use memory storage to store files in memory as Buffer objects
+const storage = multer.memoryStorage();
 
 // File filter to only allow images
 const fileFilter = (req, file, cb) => {
@@ -32,13 +20,39 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Configure multer with Cloudinary storage
+// Configure multer with memory storage
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit (increased for better quality)
+    fileSize: 10 * 1024 * 1024, // 10MB limit
   }
 });
 
-module.exports = { upload, cloudinary };
+// Helper function to upload buffer to Cloudinary
+const uploadToCloudinary = (buffer, options = {}) => {
+  return new Promise((resolve, reject) => {
+    const uploadOptions = {
+      folder: 'softglow-products',
+      transformation: [
+        { width: 1000, height: 1000, crop: 'limit' },
+        { quality: 'auto' },
+        { fetch_format: 'auto' }
+      ],
+      ...options
+    };
+
+    cloudinary.uploader.upload_stream(
+      uploadOptions,
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+    ).end(buffer);
+  });
+};
+
+module.exports = { upload, cloudinary, uploadToCloudinary };
