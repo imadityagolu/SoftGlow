@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SoftGlow Deployment Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        img {
+            max-width: 200px;
+            height: auto;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            margin: 10px;
+        }
+        .image-test {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #console-output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🕯️ SoftGlow Deployment Test</h1>
+    
+    <div class="test-section">
+        <h2>🌐 Environment Configuration</h2>
+        <div id="env-status">
+            <div class="status success">✅ Frontend URL: https://softglow-1.onrender.com</div>
+            <div class="status success">✅ Backend URL: https://softglow-t492.onrender.com</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔗 API Connectivity Test</h2>
+        <button onclick="testAPI()">Test Backend API</button>
+        <div id="api-status"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🖼️ Image Loading Test</h2>
+        <button onclick="testImages()">Test Image Loading</button>
+        <div id="image-status"></div>
+        <div class="image-test" id="image-container"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Console Output</h2>
+        <button onclick="clearConsole()">Clear Console</button>
+        <div id="console-output"></div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'https://softglow-t492.onrender.com';
+        const consoleOutput = document.getElementById('console-output');
+        
+        // Override console.log to capture output
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            logToOutput('LOG: ' + args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            logToOutput('ERROR: ' + args.join(' '));
+        };
+        
+        function logToOutput(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            consoleOutput.textContent += `[${timestamp}] ${message}\n`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        function clearConsole() {
+            consoleOutput.textContent = '';
+        }
+        
+        async function testAPI() {
+            const statusDiv = document.getElementById('api-status');
+            statusDiv.innerHTML = '<div class="status warning">🔄 Testing API connectivity...</div>';
+            
+            try {
+                console.log('Testing API endpoint:', BACKEND_URL + '/api/products');
+                const response = await fetch(BACKEND_URL + '/api/products');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('API Response received:', data.length, 'products');
+                    statusDiv.innerHTML = `<div class="status success">✅ API Connected! Found ${data.length} products</div>`;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error('API Test Failed:', error.message);
+                statusDiv.innerHTML = `<div class="status error">❌ API Failed: ${error.message}</div>`;
+            }
+        }
+        
+        async function testImages() {
+            const statusDiv = document.getElementById('image-status');
+            const container = document.getElementById('image-container');
+            
+            statusDiv.innerHTML = '<div class="status warning">🔄 Testing image loading...</div>';
+            container.innerHTML = '';
+            
+            // Test images from your uploads directory
+            const testImages = [
+                'images-1757847073837-28215629.jpeg',
+                'images-1757434044340-500612737.jpeg',
+                'images-1757433363402-22005241.jpeg'
+            ];
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (const imageName of testImages) {
+                const imageUrl = `${BACKEND_URL}/uploads/${imageName}`;
+                console.log('Testing image:', imageUrl);
+                
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = imageName;
+                img.title = imageName;
+                
+                img.onload = function() {
+                    console.log('✅ Image loaded successfully:', imageName);
+                    successCount++;
+                    updateImageStatus();
+                };
+                
+                img.onerror = function() {
+                    console.error('❌ Image failed to load:', imageName);
+                    errorCount++;
+                    img.style.border = '2px solid red';
+                    img.alt = '❌ Failed to load';
+                    updateImageStatus();
+                };
+                
+                container.appendChild(img);
+            }
+            
+            function updateImageStatus() {
+                const total = testImages.length;
+                const tested = successCount + errorCount;
+                
+                if (tested === total) {
+                    if (successCount === total) {
+                        statusDiv.innerHTML = `<div class="status success">✅ All ${total} images loaded successfully!</div>`;
+                    } else {
+                        statusDiv.innerHTML = `<div class="status error">❌ ${errorCount} of ${total} images failed to load</div>`;
+                    }
+                }
+            }
+        }
+        
+        // Test on page load
+        window.addEventListener('load', function() {
+            console.log('🕯️ SoftGlow Deployment Test Started');
+            console.log('Frontend Domain:', window.location.origin);
+            console.log('Backend URL:', BACKEND_URL);
+            
+            // Auto-test API
+            setTimeout(testAPI, 1000);
+            
+            // Auto-test images
+            setTimeout(testImages, 2000);
+        });
+        
+        // Capture any unhandled errors
+        window.addEventListener('error', function(e) {
+            console.error('Unhandled Error:', e.error?.message || e.message);
+        });
+        
+        // Capture any unhandled promise rejections
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Unhandled Promise Rejection:', e.reason);
+        });
+    </script>
+</body>
+</html>

@@ -24,7 +24,11 @@ const contactRoutes = require('./routes/contact');
 
 // CORS configuration - MUST be first to handle preflight requests
 const corsOptions = {
-    origin: [process.env.FRONTEND_URL || 'http://localhost:5174', 'http://localhost:3000'],
+    origin: [
+        process.env.FRONTEND_URL || 'http://localhost:5174', 
+        'http://localhost:3000',
+        'https://softglow-1.onrender.com' // Production frontend URL
+    ],
     methods:["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -91,7 +95,11 @@ app.options('/uploads/*', cors(corsOptions));
 // Serve static files from uploads directory with enhanced CORS
 app.use('/uploads', (req, res, next) => {
   // Set CORS headers explicitly for static files
-  const allowedOrigins = [process.env.FRONTEND_URL || 'http://localhost:5174', 'http://localhost:3000'];
+  const allowedOrigins = [
+    process.env.FRONTEND_URL || 'http://localhost:5174', 
+    'http://localhost:3000',
+    'https://softglow-1.onrender.com' // Production frontend URL
+  ];
   const origin = req.headers.origin;
   
   if (allowedOrigins.includes(origin)) {
@@ -107,7 +115,11 @@ app.use('/uploads', (req, res, next) => {
 
 // Debug: Log FRONTEND_URL to verify environment variable
 console.log('FRONTEND_URL configured as:', process.env.FRONTEND_URL || 'http://localhost:5174');
-console.log('CORS origins allowed:', [process.env.FRONTEND_URL || 'http://localhost:5174', 'http://localhost:3000']);
+console.log('CORS origins allowed:', [
+  process.env.FRONTEND_URL || 'http://localhost:5174', 
+  'http://localhost:3000',
+  'https://softglow-1.onrender.com'
+]);
 
 //api
 app.use("/api/admin/auth", adminAuthRoutes);
