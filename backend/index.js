@@ -25,9 +25,7 @@ const contactRoutes = require('./routes/contact');
 // CORS configuration - MUST be first to handle preflight requests
 const corsOptions = {
     origin: [
-        process.env.FRONTEND_URL || 'http://localhost:5174', 
-        'http://localhost:3000',
-        'https://softglow-t492.onrender.com' // Correct production backend URL
+        process.env.FRONTEND_URL
     ],
     methods:["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
@@ -96,9 +94,7 @@ app.options('/uploads/*', cors(corsOptions));
 app.use('/uploads', (req, res, next) => {
   // Set CORS headers explicitly for static files
   const allowedOrigins = [
-    process.env.FRONTEND_URL || 'http://localhost:5174', 
-    'http://localhost:3000',
-    'https://softglow-t492.onrender.com' // Correct production backend URL
+    process.env.FRONTEND_URL
   ];
   const origin = req.headers.origin;
   
@@ -113,13 +109,6 @@ app.use('/uploads', (req, res, next) => {
   next();
 }, express.static(path.join(__dirname, 'uploads')));
 
-// Debug: Log FRONTEND_URL to verify environment variable
-console.log('FRONTEND_URL configured as:', process.env.FRONTEND_URL || 'http://localhost:5174');
-console.log('CORS origins allowed:', [
-  process.env.FRONTEND_URL || 'http://localhost:5174', 
-  'http://localhost:3000',
-  'https://softglow-t492.onrender.com'
-]);
 
 //api
 app.use("/api/admin/auth", adminAuthRoutes);
@@ -135,4 +124,5 @@ app.use("/api/favorites", favoriteRoutes);
 app.use("/api/contact", contactRoutes);
 
 //starting server
-app.listen(process.env.PORT, () => console.log(`server - http://localhost:${process.env.PORT}`));
+const PORT = process.env.PORT || 8827;
+app.listen(PORT, () => console.log(`server - http://localhost:${PORT}`));

@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { upload, cloudinary, uploadToCloudinary } = require('../middleware/cloudinaryUpload');
-const { protect } = require('../middleware/auth');
+const { protectAdmin } = require('../middleware/auth');
 const path = require('path');
 
 // @desc    Upload multiple images
 // @route   POST /api/upload/images
 // @access  Private (Admin only)
-router.post('/images', protect, upload.array('images', 10), async (req, res) => {
+router.post('/images', protectAdmin, upload.array('images', 10), async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({
@@ -34,11 +34,16 @@ router.post('/images', protect, upload.array('images', 10), async (req, res) => 
       }
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('Multiple images upload error:', {
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+      filesCount: req.files ? req.files.length : 0
+    });
     res.status(500).json({
       success: false,
       message: 'Server error during file upload',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
@@ -46,7 +51,7 @@ router.post('/images', protect, upload.array('images', 10), async (req, res) => 
 // @desc    Upload single image
 // @route   POST /api/upload/image
 // @access  Private (Admin only)
-router.post('/image', protect, upload.single('image'), async (req, res) => {
+router.post('/image', protectAdmin, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -70,11 +75,16 @@ router.post('/image', protect, upload.single('image'), async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('Single image upload error:', {
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+      hasFile: !!req.file
+    });
     res.status(500).json({
       success: false,
       message: 'Server error during file upload',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 });
