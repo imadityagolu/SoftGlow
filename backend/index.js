@@ -27,7 +27,7 @@ const corsOptions = {
     origin: [
         process.env.FRONTEND_URL || 'http://localhost:5174', 
         'http://localhost:3000',
-        'https://softglow-1.onrender.com' // Production frontend URL
+        'https://softglow-t492.onrender.com' // Correct production backend URL
     ],
     methods:["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
@@ -98,7 +98,7 @@ app.use('/uploads', (req, res, next) => {
   const allowedOrigins = [
     process.env.FRONTEND_URL || 'http://localhost:5174', 
     'http://localhost:3000',
-    'https://softglow-1.onrender.com' // Production frontend URL
+    'https://softglow-t492.onrender.com' // Correct production backend URL
   ];
   const origin = req.headers.origin;
   
@@ -118,7 +118,7 @@ console.log('FRONTEND_URL configured as:', process.env.FRONTEND_URL || 'http://l
 console.log('CORS origins allowed:', [
   process.env.FRONTEND_URL || 'http://localhost:5174', 
   'http://localhost:3000',
-  'https://softglow-1.onrender.com'
+  'https://softglow-t492.onrender.com'
 ]);
 
 //api
