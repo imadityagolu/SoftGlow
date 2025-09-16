@@ -192,12 +192,12 @@ const Home = () => {
                 {heroSlides[currentSlide].description}
               </p>
               <div className="flex space-x-4">
-                <button className="bg-amber-600 text-white px-8 py-4 rounded-lg font-medium hover:bg-amber-700 transition-colors shadow-lg">
+                <Link to="/all-products" className="bg-amber-600 text-white px-8 py-4 rounded-lg font-medium hover:bg-amber-700 transition-colors shadow-lg">
                   Order now
-                </button>
-                <button className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg font-medium hover:border-amber-600 hover:text-amber-600 transition-colors">
+                </Link>
+                <Link to="/all-products" className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg font-medium hover:border-amber-600 hover:text-amber-600 transition-colors">
                   Open catalog
-                </button>
+                </Link>
               </div>
             </div>
             
@@ -389,9 +389,9 @@ const Home = () => {
               <p className="text-lg text-gray-600 mb-8">
                 From intimate dinners to relaxing baths, our candles are designed to enhance life's special moments with beautiful scents and warm, ambient lighting.
               </p>
-              <button className="bg-amber-600 text-white px-8 py-4 rounded-lg font-medium hover:bg-amber-700 transition-colors">
+              <Link to="/about" className="bg-amber-600 text-white px-8 py-4 rounded-lg font-medium hover:bg-amber-700 transition-colors">
                 Learn More
-              </button>
+              </Link>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-gradient-to-br from-amber-100 to-orange-100 rounded-2xl p-8 text-center">

@@ -1,6 +1,7 @@
 import React from 'react';
 import Header from './Header';
 import Footer from './Footer';
+import { Link } from 'react-router-dom';
 
 const AboutUs = () => {
   return (
@@ -157,18 +158,18 @@ const AboutUs = () => {
             Discover our premium candle collection and transform your space today.
           </p>
           <div className="space-x-4">
-            <a 
-              href="/all-products" 
+            <Link 
+              to="/all-products" 
               className="inline-block bg-white text-orange-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors"
             >
               Shop Now
-            </a>
-            <a 
-              href="/contact" 
+            </Link>
+            <Link 
+              to="/contact" 
               className="inline-block border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white hover:text-orange-600 transition-colors"
             >
               Contact Us
-            </a>
+            </Link>
           </div>
         </div>
       </section>

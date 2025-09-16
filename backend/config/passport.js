@@ -1,6 +1,8 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const Customer = require('../models/Customer');
+const Admin = require('../models/Admin');
+const Notification = require('../models/Notification');
 
 // Google OAuth Strategy
 passport.use(new GoogleStrategy({
@@ -41,6 +43,38 @@ passport.use(new GoogleStrategy({
     });
     
     await newCustomer.save();
+
+    // Create welcome notification for the new customer (Google OAuth)
+    try {
+      await Notification.create({
+        message: `Welcome to SoftGlow, ${newCustomer.firstName}! 🕯️ We're excited to have you join our family via Google. Explore our collection and place your first order!`,
+        type: 'general',
+        userId: newCustomer._id,
+        userType: 'Customer'
+      });
+    } catch (notificationError) {
+      console.error('Error creating welcome notification (OAuth):', notificationError);
+      // Don't fail OAuth if notification creation fails
+    }
+
+    // Create notification for all admins about new customer (Google OAuth)
+    try {
+      const admins = await Admin.find({ isActive: true });
+      const adminNotifications = admins.map(admin => ({
+        message: `New customer joined via Google! 👋 ${newCustomer.firstName} ${newCustomer.lastName} (${newCustomer.email}) has registered on SoftGlow.`,
+        type: 'general',
+        userId: admin._id,
+        userType: 'Admin'
+      }));
+      
+      if (adminNotifications.length > 0) {
+        await Notification.insertMany(adminNotifications);
+      }
+    } catch (adminNotificationError) {
+      console.error('Error creating admin notifications (OAuth):', adminNotificationError);
+      // Don't fail OAuth if notification creation fails
+    }
+    
     return done(null, newCustomer);
     
   } catch (error) {

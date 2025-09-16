@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
@@ -34,6 +34,8 @@ const CustomerDashboard = () => {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [cancelOrderModal, setCancelOrderModal] = useState({ show: false, orderId: null, orderNumber: '' });
+  const [returnOrderModal, setReturnOrderModal] = useState({ show: false, orderId: null, orderNumber: '' });
 
   const handleLogout = () => {
     logout();
@@ -49,33 +51,34 @@ const CustomerDashboard = () => {
     }
   }, [location.search]);
 
+  // Fetch customer orders function
+  const fetchOrders = useCallback(async () => {
+    if (token && activeTab === 'orders') {
+      try {
+        setOrdersLoading(true);
+        const response = await orderService.getCustomerOrders();
+        // Backend returns orders directly in response.orders
+        setOrders(response.orders || []);
+      } catch (error) {
+        console.error('Error fetching orders:', error);
+        // If JWT error, user might need to log in again
+        if (error.message.includes('invalid signature') || error.message.includes('jwt')) {
+          toast.error('Session expired. Please log in again.');
+          logout();
+          navigate('/customer/login');
+        } else {
+          toast.error('Failed to fetch orders');
+        }
+      } finally {
+        setOrdersLoading(false);
+      }
+    }
+  }, [token, activeTab, logout, navigate]);
+
   // Fetch customer orders
   useEffect(() => {
-    const fetchOrders = async () => {
-      if (token && activeTab === 'orders') {
-        try {
-          setOrdersLoading(true);
-          const response = await orderService.getCustomerOrders();
-          // Backend returns orders directly in response.orders
-          setOrders(response.orders || []);
-        } catch (error) {
-          console.error('Error fetching orders:', error);
-          // If JWT error, user might need to log in again
-          if (error.message.includes('invalid signature') || error.message.includes('jwt')) {
-            toast.error('Session expired. Please log in again.');
-            logout();
-            navigate('/customer/login');
-          } else {
-            toast.error('Failed to fetch orders');
-          }
-        } finally {
-          setOrdersLoading(false);
-        }
-      }
-    };
-    
     fetchOrders();
-  }, [token, activeTab, logout, navigate]);
+  }, [fetchOrders]);
 
   // Fetch customer profile data
   useEffect(() => {
@@ -171,8 +174,8 @@ const CustomerDashboard = () => {
   const handleQuantityUpdate = async (itemId, newQuantity) => {
     if (newQuantity < 1) return;
     
-    console.log('handleQuantityUpdate called with:', { itemId, newQuantity });
-    console.log('Current cartItems:', cartItems.map(item => ({ id: item._id, productId: item.product._id, quantity: item.quantity })));
+    // console.log('handleQuantityUpdate called with:', { itemId, newQuantity });
+    // console.log('Current cartItems:', cartItems.map(item => ({ id: item._id, productId: item.product._id, quantity: item.quantity })));
     
     // Find the cart item to check stock
     const cartItem = cartItems.find(item => item._id === itemId);
@@ -195,8 +198,8 @@ const CustomerDashboard = () => {
   // Handle cart item removal
   const handleRemoveItem = async (itemId) => {
     try {
-      console.log('handleRemoveItem called with:', { itemId });
-      console.log('Current cartItems:', cartItems.map(item => ({ id: item._id, productId: item.product._id })));
+      // console.log('handleRemoveItem called with:', { itemId });
+      // console.log('Current cartItems:', cartItems.map(item => ({ id: item._id, productId: item.product._id })));
       await removeFromCart(itemId);
       setMessage({ type: 'success', text: 'Item removed from cart' });
       setTimeout(() => setMessage({ type: '', text: '' }), 3000);
@@ -339,8 +342,104 @@ const CustomerDashboard = () => {
       case 'shipped': return 'bg-blue-100 text-blue-800';
       case 'processing': return 'bg-yellow-100 text-yellow-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'refunded': return 'bg-purple-100 text-purple-800';
       case 'pending': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Handle cancel order
+  const handleCancelOrder = async () => {
+    try {
+      setLoading(true);
+      const response = await orderService.cancelOrder(cancelOrderModal.orderId);
+      
+      if (response.success) {
+        toast.success('Order cancelled successfully');
+        // Update the order status in the local state
+        setOrders(orders.map(order => 
+          order._id === cancelOrderModal.orderId 
+            ? { ...order, status: 'cancelled' }
+            : order
+        ));
+      } else {
+        toast.error(response.message || 'Failed to cancel order');
+      }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast.error(error.message || 'Failed to cancel order');
+    } finally {
+      setLoading(false);
+      setCancelOrderModal({ show: false, orderId: null, orderNumber: '' });
+    }
+  };
+
+  // Handle download invoice
+  const handleDownloadInvoice = async (orderId) => {
+    try {
+      setLoading(true);
+      const response = await orderService.downloadInvoice(orderId);
+      
+      // Create blob and download
+      const blob = new Blob([response], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `invoice-${orderId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Invoice downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      toast.error(error.message || 'Failed to download invoice');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Check if order is within 24 hours of completion
+  const isWithin24Hours = (order) => {
+    if (order.status?.toLowerCase() !== 'completed') {
+      return false;
+    }
+    
+    // Use deliveryDate if available, otherwise use updatedAt timestamp
+    let completedTime;
+    if (order.deliveryDate) {
+      completedTime = new Date(order.deliveryDate);
+    } else if (order.updatedAt) {
+      completedTime = new Date(order.updatedAt);
+    } else {
+      return false;
+    }
+    
+    const now = new Date();
+    const timeDiff = now - completedTime;
+    const hoursDiff = timeDiff / (1000 * 60 * 60); // Convert to hours
+    
+    return hoursDiff <= 24;
+  };
+
+  // Handle return order
+  const handleReturnOrder = (orderId, orderNumber) => {
+    setReturnOrderModal({ show: true, orderId, orderNumber });
+  };
+
+  const confirmReturnOrder = async () => {
+    try {
+      setLoading(true);
+      await orderService.returnOrder(returnOrderModal.orderId);
+      toast.success('Return request submitted successfully');
+      fetchOrders(); // Refresh orders list
+      setReturnOrderModal({ show: false, orderId: null, orderNumber: '' });
+    } catch (error) {
+      console.error('Error returning order:', error);
+      toast.error(error.message || 'Failed to submit return request');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -386,6 +485,7 @@ const CustomerDashboard = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" colSpan="2">Items & Quantities</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -420,6 +520,42 @@ const CustomerDashboard = () => {
                             {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Unknown'}
                           </span>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-y-2">
+                          {order.status?.toLowerCase() !== 'completed' && 
+                           order.status?.toLowerCase() !== 'cancelled' && 
+                           order.status?.toLowerCase() !== 'refunded' && 
+                           order.status?.toLowerCase() !== 'return' && (
+                            <button
+                              onClick={() => setCancelOrderModal({ show: true, orderId: order._id, orderNumber: order.orderNumber })}
+                              className="w-full bg-red-600 text-white py-1 px-3 rounded-lg hover:bg-red-700 transition-colors text-xs"
+                            >
+                              Cancel Order
+                            </button>
+                          )}
+                          {order.status?.toLowerCase() === 'completed' && (
+                            <div className="space-y-1">
+                              <button
+                                onClick={() => handleDownloadInvoice(order._id)}
+                                className="bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 transition-colors text-xs"
+                              >
+                                Download Invoice
+                              </button>
+                              {isWithin24Hours(order) && (
+                                <button
+                                  onClick={() => handleReturnOrder(order._id, order.orderNumber)}
+                                  className="bg-orange-600 text-white py-1 px-3 rounded-lg hover:bg-orange-700 transition-colors text-xs"
+                                >
+                                  Return
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          {(order.status?.toLowerCase() === 'refunded' || 
+                            order.status?.toLowerCase() === 'cancelled' ||
+                            order.status?.toLowerCase() === 'return') && (
+                            <span className="text-gray-400 text-xs">No actions available</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -453,7 +589,10 @@ const CustomerDashboard = () => {
                     return (
                       <div key={favorite._id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                         <div className="text-center">
-                          <div className="w-20 h-20 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-4 overflow-hidden">
+                          <Link 
+                            to={`/product/${product?._id}`}
+                            className="w-20 h-20 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-4 overflow-hidden hover:bg-orange-200 transition-colors cursor-pointer"
+                          >
                             {product && product.images && product.images.length > 0 ? (
                               <img 
                                 src={getImageUrl(product.images[0])} 
@@ -463,8 +602,13 @@ const CustomerDashboard = () => {
                             ) : (
                               <span className="text-2xl">🕯️</span>
                             )}
-                          </div>
-                          <h4 className="font-medium text-gray-900 mb-2">{product?.name || 'Product Name'}</h4>
+                          </Link>
+                          <Link 
+                            to={`/product/${product?._id}`}
+                            className="hover:text-orange-600 transition-colors cursor-pointer"
+                          >
+                            <h4 className="font-medium text-gray-900 mb-2 hover:text-orange-600">{product?.name || 'Product Name'}</h4>
+                          </Link>
                           <p className="text-orange-600 font-bold mb-4">₹{product?.price || '0'}</p>
                           <div className=" space-y-2">
                             <button 
@@ -473,14 +617,6 @@ const CustomerDashboard = () => {
                             >
                               Remove from Favorites
                             </button>
-                            {product?._id && (
-                              <Link 
-                                to={`/product/${product._id}`}
-                                className="block w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors text-center text-sm"
-                              >
-                                View Product
-                              </Link>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -692,7 +828,10 @@ const CustomerDashboard = () => {
                   {cartItems.map((item) => (
                     <div key={item.product._id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                       <div className="flex items-center space-x-4">
-                        <div className="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center overflow-hidden">
+                        <Link 
+                          to={`/product/${item.product._id}`}
+                          className="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center overflow-hidden hover:bg-orange-200 transition-colors cursor-pointer"
+                        >
                           {item.product.images && item.product.images.length > 0 ? (
                             <img 
                               src={getImageUrl(item.product.images[0])} 
@@ -707,9 +846,14 @@ const CustomerDashboard = () => {
                           <div className="w-full h-full flex items-center justify-center" style={{display: item.product.images && item.product.images.length > 0 ? 'none' : 'flex'}}>
                             <span className="text-2xl">🕯️</span>
                           </div>
-                        </div>
+                        </Link>
                         <div>
-                          <h4 className="font-medium text-gray-900">{item.product.name}</h4>
+                          <Link 
+                            to={`/product/${item.product._id}`}
+                            className="hover:text-orange-600 transition-colors cursor-pointer"
+                          >
+                            <h4 className="font-medium text-gray-900 hover:text-orange-600">{item.product.name}</h4>
+                          </Link>
                           <p className="text-orange-600 font-bold">₹{item.product.price}</p>
                         </div>
                       </div>
@@ -856,7 +1000,7 @@ const CustomerDashboard = () => {
           {/* Overlay for mobile */}
           {sidebarOpen && (
             <div 
-              className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20 transition-opacity duration-300 ease-in-out"
+              className="lg:hidden fixed inset-0 bg-opacity-20 backdrop-blur-sm z-20 transition-opacity duration-300 ease-in-out"
               onClick={() => setSidebarOpen(false)}
             />
           )}
@@ -867,6 +1011,64 @@ const CustomerDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Cancel Order Modal */}
+      {cancelOrderModal.show && (
+        <div className="fixed inset-0 bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Cancel Order</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to cancel order <strong>{cancelOrderModal.orderNumber}</strong>? 
+              This action cannot be undone.
+            </p>
+            <div className="flex space-x-4">
+              <button
+                onClick={() => setCancelOrderModal({ show: false, orderId: null, orderNumber: '' })}
+                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                disabled={loading}
+              >
+                No, Keep Order
+              </button>
+              <button
+                onClick={handleCancelOrder}
+                className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors"
+                disabled={loading}
+              >
+                {loading ? 'Cancelling...' : 'Yes, Cancel Order'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Return Order Modal */}
+      {returnOrderModal.show && (
+        <div className="fixed inset-0 bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Return Order</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to return order <strong>{returnOrderModal.orderNumber}</strong>? 
+              This will initiate a return request that will be reviewed by our team.
+            </p>
+            <div className="flex space-x-4">
+              <button
+                onClick={() => setReturnOrderModal({ show: false, orderId: null, orderNumber: '' })}
+                className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition-colors"
+                disabled={loading}
+              >
+                No, Keep Order
+              </button>
+              <button
+                onClick={confirmReturnOrder}
+                className="flex-1 bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors"
+                disabled={loading}
+              >
+                {loading ? 'Processing...' : 'Yes, Return Order'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

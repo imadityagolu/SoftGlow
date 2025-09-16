@@ -1,4 +1,6 @@
 const Customer = require('../models/Customer');
+const Admin = require('../models/Admin');
+const Notification = require('../models/Notification');
 const jwt = require('jsonwebtoken');
 
 // Generate JWT Token
@@ -48,6 +50,37 @@ const registerCustomer = async (req, res) => {
 
     // Generate token
     const token = generateToken(customer._id);
+
+    // Create welcome notification for the new customer
+    try {
+      await Notification.create({
+        message: `Welcome to SoftGlow, ${customer.firstName}! 🕯️ We're excited to have you join our family. Explore our collection and place your first order!`,
+        type: 'general',
+        userId: customer._id,
+        userType: 'Customer'
+      });
+    } catch (notificationError) {
+      console.error('Error creating welcome notification:', notificationError);
+      // Don't fail registration if notification creation fails
+    }
+
+    // Create notification for all admins about new customer
+    try {
+      const admins = await Admin.find({ isActive: true });
+      const adminNotifications = admins.map(admin => ({
+        message: `New customer joined! 👋 ${customer.firstName} ${customer.lastName} (${customer.email}) has registered on SoftGlow.`,
+        type: 'general',
+        userId: admin._id,
+        userType: 'Admin'
+      }));
+      
+      if (adminNotifications.length > 0) {
+        await Notification.insertMany(adminNotifications);
+      }
+    } catch (adminNotificationError) {
+      console.error('Error creating admin notifications:', adminNotificationError);
+      // Don't fail registration if notification creation fails
+    }
 
     res.status(201).json({
       success: true,

@@ -12,8 +12,13 @@ const getAdminStats = async (req, res) => {
     const totalCustomers = await Customer.countDocuments();
     const totalOrders = await Order.countDocuments();
     
-    // Calculate total revenue from all orders
+    // Calculate total revenue from all orders (excluding cancelled, refunded, and return orders)
     const revenueResult = await Order.aggregate([
+      {
+        $match: {
+          status: { $nin: ['cancelled', 'refunded', 'return'] }
+        }
+      },
       {
         $group: {
           _id: null,
@@ -41,11 +46,12 @@ const getAdminStats = async (req, res) => {
       orderDate: { $gte: thirtyDaysAgo }
     });
     
-    // Calculate revenue for last 30 days
+    // Calculate revenue for last 30 days (excluding cancelled, refunded, and return orders)
     const recentRevenueResult = await Order.aggregate([
       {
         $match: {
-          orderDate: { $gte: thirtyDaysAgo }
+          orderDate: { $gte: thirtyDaysAgo },
+          status: { $nin: ['cancelled', 'refunded', 'return'] }
         }
       },
       {

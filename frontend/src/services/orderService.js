@@ -123,12 +123,15 @@ class OrderService {
   }
 
   // Admin: Get all orders
-  async getAllOrders(page = 1, limit = 20, status = 'all') {
+  async getAllOrders(page = 1, limit = 20, status = 'all', search = '') {
     try {
       const token = localStorage.getItem('token');
       let url = `${API_BASE_URL}/orders/admin/orders?page=${page}&limit=${limit}`;
       if (status !== 'all') {
         url += `&status=${status}`;
+      }
+      if (search.trim()) {
+        url += `&search=${encodeURIComponent(search.trim())}`;
       }
       
       const response = await fetch(url, {
@@ -172,6 +175,77 @@ class OrderService {
       return await response.json();
     } catch (error) {
       console.error('Error updating order status:', error);
+      throw error;
+    }
+  }
+
+  // Customer: Cancel order
+  async cancelOrder(orderId) {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/orders/customer/orders/${orderId}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      throw error;
+    }
+  }
+
+  // Customer: Download invoice
+  async downloadInvoice(orderId) {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/orders/customer/orders/${orderId}/invoice`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.blob();
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      throw error;
+    }
+  }
+
+  // Customer: Return order
+  async returnOrder(orderId) {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/orders/customer/orders/${orderId}/return`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error returning order:', error);
       throw error;
     }
   }

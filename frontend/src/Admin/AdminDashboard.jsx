@@ -20,6 +20,8 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [adminStats, setAdminStats] = useState({
     totalProducts: 0,
     totalOrders: 0,
@@ -39,7 +41,8 @@ const AdminDashboard = () => {
     price: '',
     quantity: '',
     category: 'candles',
-    images: []
+    images: [],
+    newImages: []
   });
   const [deleteConfirmation, setDeleteConfirmation] = useState({
     show: false,
@@ -94,7 +97,7 @@ const AdminDashboard = () => {
   const fetchOrders = async () => {
     try {
       setOrdersLoading(true);
-      const response = await orderService.getAllOrders(token);
+      const response = await orderService.getAllOrders(1, 20, statusFilter, searchTerm);
       setOrders(response.orders || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -153,7 +156,8 @@ const AdminDashboard = () => {
       price: product.price.toString(),
       quantity: product.quantity.toString(),
       category: product.category,
-      images: product.images || []
+      images: product.images || [],
+      newImages: []
     });
     setActiveTab('edit-product');
   };
@@ -168,7 +172,8 @@ const AdminDashboard = () => {
       price: '',
       quantity: '',
       category: 'candles',
-      images: []
+      images: [],
+      newImages: []
     });
   };
 
@@ -177,12 +182,18 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       
-      let imageUrls = editForm.images;
+      let finalImageUrls = [...editForm.images]; // Start with existing images
       
-      // If new files were selected, upload them
-      if (editForm.images.length > 0 && editForm.images[0] instanceof File) {
-        const uploadResponse = await productService.uploadImages(editForm.images, token);
-        imageUrls = uploadResponse.data.images;
+      // If new files were selected, upload them and add to the list
+      if (editForm.newImages.length > 0) {
+        const uploadResponse = await productService.uploadImages(editForm.newImages, token);
+        finalImageUrls = [...finalImageUrls, ...uploadResponse.data.images];
+      }
+      
+      // Ensure at least one image exists
+      if (finalImageUrls.length === 0) {
+        toast.error('Product must have at least one image');
+        return;
       }
       
       const productData = {
@@ -191,7 +202,7 @@ const AdminDashboard = () => {
         price: parseFloat(editForm.price),
         quantity: parseInt(editForm.quantity),
         category: editForm.category,
-        images: imageUrls
+        images: finalImageUrls
       };
       
       await productService.updateProduct(productId, productData, token);
@@ -241,11 +252,28 @@ const AdminDashboard = () => {
   const handleEditImageChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length < 1) {
-      toast.warning('Please select at least 1 image');
       return;
     }
     
-    setEditForm(prev => ({ ...prev, images: files }));
+    setEditForm(prev => ({ ...prev, newImages: [...prev.newImages, ...files] }));
+    // Clear the file input
+    e.target.value = '';
+  };
+
+  // Remove existing image
+  const removeExistingImage = (indexToRemove) => {
+    setEditForm(prev => ({
+      ...prev,
+      images: prev.images.filter((_, index) => index !== indexToRemove)
+    }));
+  };
+
+  // Remove new image
+  const removeNewImage = (indexToRemove) => {
+    setEditForm(prev => ({
+      ...prev,
+      newImages: prev.newImages.filter((_, index) => index !== indexToRemove)
+    }));
   };
 
   // Fetch data when component mounts or when switching tabs
@@ -261,6 +289,13 @@ const AdminDashboard = () => {
     }
   }, [activeTab]);
 
+  // Refetch orders when search term or status filter changes
+  useEffect(() => {
+    if (activeTab === 'orders') {
+      fetchOrders();
+    }
+  }, [searchTerm, statusFilter]);
+
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length < 1) {
@@ -268,6 +303,22 @@ const AdminDashboard = () => {
       return;
     }
     setProductForm(prev => ({ ...prev, images: files }));
+  };
+
+  // Remove image from product form
+  const removeProductImage = (indexToRemove) => {
+    setProductForm(prev => ({
+      ...prev,
+      images: prev.images.filter((_, index) => index !== indexToRemove)
+    }));
+  };
+
+  // Clear all images from product form
+  const clearAllProductImages = () => {
+    setProductForm(prev => ({ ...prev, images: [] }));
+    // Reset file input
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) fileInput.value = '';
   };
 
   const handleProductSubmit = async (e) => {
@@ -408,7 +459,7 @@ const AdminDashboard = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th> */}
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
@@ -419,9 +470,9 @@ const AdminDashboard = () => {
                           <div className="flex items-center">
                             <div className="flex-shrink-0 h-10 w-10">
                               {product.images && product.images.length > 0 ? (
-                                <img className="h-10 w-10 rounded-full object-cover" src={getImageUrl(product.images[0])} alt={product.name} />
+                                <img className="h-10 w-10 object-cover" src={getImageUrl(product.images[0])} alt={product.name} />
                               ) : (
-                                <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                <div className="h-10 w-10 bg-gray-300 flex items-center justify-center">
                                   <span className="text-gray-600 text-xs">No Image</span>
                                 </div>
                               )}
@@ -441,13 +492,13 @@ const AdminDashboard = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {product.quantity}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        {/* <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             product.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                           }`}>
                             {product.isActive ? 'Active' : 'Inactive'}
                           </span>
-                        </td>
+                        </td> */}
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button 
                             onClick={() => startEditProduct(product)}
@@ -568,9 +619,43 @@ const AdminDashboard = () => {
                   onChange={handleImageChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 />
+                
+                {/* Image Previews */}
                 {productForm.images.length > 0 && (
-                  <div className="mt-2 text-sm text-gray-600">
-                    {productForm.images.length} image(s) selected
+                  <div className="mt-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="text-sm font-medium text-gray-700">
+                        Selected Images ({productForm.images.length}):
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={clearAllProductImages}
+                        className="text-xs text-red-600 hover:text-red-800 underline"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {productForm.images.map((file, index) => (
+                        <div key={index} className="relative group w-50 h-50">
+                          <div className="aspect-square w-full">
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={`Preview ${index + 1}`}
+                              className="w-full h-full object-cover rounded-lg border border-gray-300"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeProductImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors shadow-lg"
+                            title="Remove image"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -696,17 +781,78 @@ const AdminDashboard = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Product Images (Select new images to replace current ones)
+                  Product Images
                 </label>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleEditImageChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                />
+                
+                {/* Current Images Preview */}
+                {editForm.images.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Current Images:</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {editForm.images.map((imageUrl, index) => (
+                        <div key={`existing-${index}`} className="relative group w-50 h-50">
+                          <img
+                            src={getImageUrl(imageUrl)}
+                            alt={`Product ${index + 1}`}
+                            className="w-full h-full object-cover rounded-lg border border-gray-300"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeExistingImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* New Images Preview */}
+                {editForm.newImages.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">New Images to Add:</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {editForm.newImages.map((file, index) => (
+                        <div key={`new-${index}`} className="relative group w-50 h-50">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`New ${index + 1}`}
+                            className="w-full h-full object-cover rounded-lg border border-gray-300"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeNewImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add New Images */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Add More Images:
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleEditImageChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  />
+                </div>
+                
                 <div className="mt-2 text-sm text-gray-600">
-                  Current images: {editForm.images.length} image(s)
+                  Total images: {editForm.images.length + editForm.newImages.length}
+                  {editForm.images.length + editForm.newImages.length === 0 && (
+                    <span className="text-red-600 ml-2">⚠ Product must have at least one image</span>
+                  )}
                 </div>
               </div>
 
@@ -741,7 +887,44 @@ const AdminDashboard = () => {
         return (
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-medium text-gray-900">Order: {orders.length}</h3>
+              <h3 className="text-lg font-medium text-gray-900">Orders: {orders.length}</h3>
+            </div>
+            
+            {/* Search and Filter Controls */}
+            <div className="mb-6 flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Search by Order ID or Customer Name
+                </label>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Enter order ID or customer name..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                />
+              </div>
+              <div className="sm:w-48">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Filter by Status
+                </label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="processing">Processing</option>
+                  <option value="shipped">Shipped</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="refunded">Refunded</option>
+                  <option value="return">Return</option>
+                </select>
+              </div>
             </div>
             
             {ordersLoading ? (
@@ -761,6 +944,7 @@ const AdminDashboard = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment ID</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
@@ -805,12 +989,17 @@ const AdminDashboard = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           ₹{order.totalAmount?.toFixed(2) || '0.00'}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {order.razorpayPaymentId || 'N/A'}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             order.status === 'completed' ? 'bg-green-100 text-green-800' :
                             order.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
                             order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
                             order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                            order.status === 'refunded' ? 'bg-purple-100 text-purple-800' :
+                            order.status === 'return' ? 'bg-orange-100 text-orange-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
                             {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Unknown'}
@@ -827,6 +1016,7 @@ const AdminDashboard = () => {
                             <option value="shipped">Shipped</option>
                             <option value="completed">Completed</option>
                             <option value="cancelled">Cancelled</option>
+                            <option value="refunded">Refunded</option>
                           </select>
                         </td>
                       </tr>
@@ -861,8 +1051,8 @@ const AdminDashboard = () => {
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th> */}
+                      {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th> */}
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
@@ -878,6 +1068,12 @@ const AdminDashboard = () => {
                                 {customer.email}
                                 <br/>
                                 {customer.phone || 'N/A'}
+                                <br/>
+                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            customer.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {customer.isActive ? 'Active' : 'Inactive'}
+                          </span> - {new Date(customer.createdAt).toLocaleDateString()}
                               </div>
                             </div>
                           </div>
@@ -885,20 +1081,20 @@ const AdminDashboard = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {customer.address?.street || 'N/A'}
                           <br/>
-                          {customer.address?.city || 'N/A'}, {customer.address?.state || 'N/A'}-{customer.address?.zipCode || 'N/A'}
+                          {customer.address?.city || 'N/A'} - {customer.address?.zipCode || 'N/A'}
                           <br/>
-                          {customer.address?.country || 'N/A'}
+                          {customer.address?.state || 'N/A'}, {customer.address?.country || 'N/A'}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {new Date(customer.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        </td> */}
+                        {/* <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             customer.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                           }`}>
                             {customer.isActive ? 'Active' : 'Inactive'}
                           </span>
-                        </td>
+                        </td> */}
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button 
                             onClick={() => toggleCustomerStatus(customer._id, !customer.isActive)}
@@ -924,7 +1120,7 @@ const AdminDashboard = () => {
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
       <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center">
               {/* Mobile menu button */}
@@ -952,7 +1148,7 @@ const AdminDashboard = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex">
           {/* Sidebar */}
           <div className={`${sidebarOpen ? 'fixed inset-y-0 left-0 transform translate-x-0' : 'fixed inset-y-0 left-0 transform -translate-x-full'} lg:relative lg:translate-x-0 lg:block w-64 bg-white lg:rounded-lg shadow-lg lg:mr-8 z-30 lg:z-auto transition-transform duration-300 ease-in-out`}>

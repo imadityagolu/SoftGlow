@@ -7,7 +7,10 @@ const {
   getCustomerOrders,
   getOrderDetails,
   getAllOrders,
-  updateOrderStatus
+  updateOrderStatus,
+  cancelOrder,
+  returnOrder,
+  generateInvoice
 } = require('../controllers/orderController');
 const { protectCustomer, protectAdmin } = require('../middleware/auth');
 
@@ -33,6 +36,15 @@ router.get('/customer/orders', getCustomerOrders);
 
 // Get single order details
 router.get('/customer/orders/:orderId', getOrderDetails);
+
+// Cancel order
+router.put('/customer/orders/:orderId/cancel', cancelOrder);
+
+// Return order
+router.put('/customer/orders/:orderId/return', returnOrder);
+
+// Generate and download invoice
+router.get('/customer/orders/:orderId/invoice', generateInvoice);
 
 // Admin routes
 router.use('/admin', protectAdmin);

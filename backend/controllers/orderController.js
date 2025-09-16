@@ -242,7 +242,12 @@ const verifyPaymentAndCreateOrder = async (req, res) => {
       },
       customerPhone: customer.phone,
       customerEmail: customer.email,
-      customerName: `${customer.firstName} ${customer.lastName}`
+      customerName: `${customer.firstName} ${customer.lastName}`,
+      statusHistory: [{
+        status: 'confirmed',
+        timestamp: new Date(),
+        notes: 'Order confirmed and payment completed'
+      }]
     });
 
     console.log('Creating order with data:', {
@@ -274,7 +279,7 @@ const verifyPaymentAndCreateOrder = async (req, res) => {
     try {
       // Customer notification
       await createNotification({
-        message: `Your order #${order.orderNumber} has been placed successfully`,
+        message: `Your order ${order.orderNumber} has been placed successfully`,
         type: 'order',
         userId: customerId,
         userType: 'Customer',
@@ -285,7 +290,7 @@ const verifyPaymentAndCreateOrder = async (req, res) => {
       const admin = await Admin.findOne();
       if (admin) {
         await createNotification({
-          message: `New order #${order.orderNumber} has been placed by ${customer.firstName} ${customer.lastName}`,
+          message: `New order ${order.orderNumber} has been placed by ${customer.firstName} ${customer.lastName}`,
           type: 'order',
           userId: admin._id,
           userType: 'Admin',
@@ -413,10 +418,22 @@ const getAllOrders = async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
     const status = req.query.status;
+    const search = req.query.search;
 
     let query = {};
+    
+    // Filter by status
     if (status && status !== 'all') {
       query.status = status;
+    }
+
+    // Search by order ID or customer name
+    if (search) {
+      query.$or = [
+        { orderNumber: { $regex: search, $options: 'i' } },
+        { customerName: { $regex: search, $options: 'i' } },
+        { customerEmail: { $regex: search, $options: 'i' } }
+      ];
     }
 
     const orders = await Order.find(query)
@@ -449,7 +466,7 @@ const updateOrderStatus = async (req, res) => {
     const { orderId } = req.params;
     const { status, notes } = req.body;
 
-    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'];
+    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'completed', 'cancelled', 'refunded'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
@@ -461,16 +478,32 @@ const updateOrderStatus = async (req, res) => {
     if (status === 'delivered' || status === 'completed') {
       updateData.deliveryDate = new Date();
     }
+    if (status === 'refunded') {
+      updateData.refundDate = new Date();
+    }
 
-    const order = await Order.findByIdAndUpdate(
-      orderId,
-      updateData,
-      { new: true }
-    ).populate('customer', 'name email phone');
-
+    // First get the order to update statusHistory
+    const order = await Order.findById(orderId).populate('customer', 'name email phone');
+    
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
+
+    // Update the order fields
+    Object.assign(order, updateData);
+    
+    // Add to statusHistory
+    if (!order.statusHistory) {
+      order.statusHistory = [];
+    }
+    
+    order.statusHistory.push({
+      status: status,
+      timestamp: new Date(),
+      notes: notes || `Order status updated to ${status}`
+    });
+    
+    await order.save();
 
     // Create notification for customer about order status update
     try {
@@ -481,16 +514,45 @@ const updateOrderStatus = async (req, res) => {
         shipped: 'Your order has been shipped and is on its way',
         delivered: 'Your order has been delivered successfully',
         completed: 'Your order has been completed successfully',
-        cancelled: 'Your order has been cancelled'
+        cancelled: 'Your order has been cancelled',
+        refunded: 'Your refund has been initiated and will be processed within 5-7 business days'
       };
 
       await createNotification({
-        message: `Order #${order.orderNumber} status updated: ${statusMessages[status]}`,
+        message: `Order ${order.orderNumber} status updated: ${statusMessages[status]}`,
         type: 'order',
         userId: order.customer._id,
         userType: 'Customer',
         orderId: order._id
       });
+
+      // If status is refunded, also create notification for admin
+      if (status === 'refunded') {
+        console.log('Creating refund notifications for admins...');
+        // Get admin users to notify
+        const admins = await Admin.find({}, '_id');
+        console.log('Found admins:', admins.length);
+        
+        if (admins.length === 0) {
+          console.log('No admin users found in database');
+        }
+        
+        for (const admin of admins) {
+          console.log('Creating notification for admin:', admin._id);
+          try {
+            await createNotification({
+              message: `Refund processed for Order ${order.orderNumber}`,
+              type: 'order',
+              userId: admin._id,
+              userType: 'Admin',
+              orderId: order._id
+            });
+            console.log('Admin notification created successfully for:', admin._id);
+          } catch (adminNotificationError) {
+            console.error('Error creating admin notification for:', admin._id, adminNotificationError);
+          }
+        }
+      }
     } catch (notificationError) {
       console.error('Error creating notification:', notificationError);
       // Don't fail the order update if notification creation fails
@@ -506,6 +568,255 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+// Customer: Cancel order
+const cancelOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const customerId = req.customer._id;
+
+    // Find the order
+    const order = await Order.findOne({ _id: orderId, customer: customerId });
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Check if order can be cancelled
+    if (order.status === 'completed' || order.status === 'cancelled') {
+      return res.status(400).json({ 
+        message: `Order cannot be cancelled as it is already ${order.status}` 
+      });
+    }
+
+    // Update order status to cancelled
+    order.status = 'cancelled';
+    order.cancelledAt = new Date();
+    await order.save();
+
+    // Create notification for customer
+    await createNotification({
+      userId: customerId,
+      userType: 'Customer',
+      type: 'order',
+      message: `Your order ${order.orderNumber} has been cancelled successfully. Refund will be transfered.`,
+      orderId: order._id
+    });
+
+    // Create notification for all admins
+    const admins = await Admin.find({});
+    for (const admin of admins) {
+      await createNotification({
+        userId: admin._id,
+        userType: 'Admin',
+        type: 'order',
+        message: `Order ${order.orderNumber} has been cancelled by the customer.`,
+        orderId: order._id
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Order cancelled successfully',
+      order
+    });
+  } catch (error) {
+    console.error('Error cancelling order:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Customer: Return order
+const returnOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const customerId = req.customer._id;
+
+    // Find the order
+    const order = await Order.findOne({ _id: orderId, customer: customerId });
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Check if order can be returned (must be completed)
+    if (order.status !== 'completed') {
+      return res.status(400).json({ 
+        message: 'Only completed orders can be returned' 
+      });
+    }
+
+    // Check if order is within 24 hours of completion
+    let completedTime;
+    
+    // First try to get completion time from statusHistory
+    const completedStatus = order.statusHistory?.find(status => 
+      status.status?.toLowerCase() === 'completed'
+    );
+    
+    if (completedStatus) {
+      completedTime = new Date(completedStatus.timestamp);
+    } else if (order.deliveryDate) {
+      // Fallback to deliveryDate for orders without statusHistory
+      completedTime = new Date(order.deliveryDate);
+    } else {
+      return res.status(400).json({ 
+        message: 'Order completion time not found' 
+      });
+    }
+    const now = new Date();
+    const timeDiff = now - completedTime;
+    const hoursDiff = timeDiff / (1000 * 60 * 60); // Convert to hours
+
+    if (hoursDiff > 24) {
+      return res.status(400).json({ 
+        message: 'Return period has expired. Orders can only be returned within 24 hours of completion.' 
+      });
+    }
+
+    // Update order status to return
+    order.status = 'return';
+    
+    // Initialize statusHistory if it doesn't exist
+    if (!order.statusHistory) {
+      order.statusHistory = [];
+    }
+    
+    order.statusHistory.push({
+      status: 'return',
+      timestamp: new Date(),
+      notes: 'Return requested by customer'
+    });
+    order.returnedAt = new Date();
+    await order.save();
+
+    // Create notification for customer
+    await createNotification({
+      userId: customerId,
+      userType: 'Customer',
+      type: 'order',
+      message: `Your return request for order ${order.orderNumber} has been submitted successfully. We will process it shortly.`,
+      orderId: order._id
+    });
+
+    // Create notification for all admins
+    const admins = await Admin.find({});
+    for (const admin of admins) {
+      await createNotification({
+        userId: admin._id,
+        userType: 'Admin',
+        type: 'order',
+        message: `Customer has requested a return for order ${order.orderNumber}. Please review and process.`,
+        orderId: order._id
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Return request submitted successfully',
+      order
+    });
+  } catch (error) {
+    console.error('Error returning order:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Customer: Generate and download invoice
+const generateInvoice = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const customerId = req.customer._id;
+
+    // Find the order
+    const order = await Order.findOne({ _id: orderId, customer: customerId })
+      .populate('customer')
+      .populate('items.product');
+    
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Check if order is completed
+    if (order.status !== 'completed') {
+      return res.status(400).json({ 
+        message: 'Invoice can only be generated for completed orders' 
+      });
+    }
+
+    // Generate PDF invoice (using a simple HTML to PDF approach)
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument();
+    
+    // Set response headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderNumber}.pdf`);
+    
+    // Pipe the PDF to response
+    doc.pipe(res);
+
+    // Add invoice content
+    doc.fontSize(20).text('SOFTGLOW INVOICE', 50, 50);
+    doc.fontSize(12);
+    
+    // Order details
+    doc.text(`Invoice Number: ${order.orderNumber}`, 50, 100);
+    doc.text(`Order Date: ${new Date(order.orderDate).toLocaleDateString()}`, 50, 120);
+    doc.text(`Order Status: ${order.status.toUpperCase()}`, 50, 140);
+    
+    // Customer details
+    doc.text('Bill To:', 50, 180);
+    doc.text(`${order.customer.firstName} ${order.customer.lastName}`, 50, 200);
+    doc.text(`${order.customer.email}`, 50, 220);
+    if (order.customer.phone) {
+      doc.text(`Phone: ${order.customer.phone}`, 50, 240);
+    }
+    
+    // Address
+    if (order.customer.address) {
+      const addr = order.customer.address;
+      doc.text('Shipping Address:', 50, 280);
+      doc.text(`${addr.street}`, 50, 300);
+      doc.text(`${addr.city}, ${addr.state} ${addr.zipCode}`, 50, 320);
+      if (addr.country) {
+        doc.text(`${addr.country}`, 50, 340);
+      }
+    }
+    
+    // Items table header
+    doc.text('Items:', 50, 380);
+    doc.text('Product', 50, 400);
+    doc.text('Quantity', 250, 400);
+    doc.text('Price', 350, 400);
+    doc.text('Total', 450, 400);
+    
+    // Draw line
+    doc.moveTo(50, 415).lineTo(550, 415).stroke();
+    
+    // Items
+    let yPosition = 430;
+    order.items.forEach((item) => {
+      doc.text(item.product.name, 50, yPosition);
+      doc.text(item.quantity.toString(), 250, yPosition);
+      doc.text(`₹${item.product.price}`, 350, yPosition);
+      doc.text(`₹${(item.product.price * item.quantity).toFixed(2)}`, 450, yPosition);
+      yPosition += 20;
+    });
+    
+    // Total
+    doc.moveTo(50, yPosition + 10).lineTo(550, yPosition + 10).stroke();
+    doc.fontSize(14).text(`Total Amount: ₹${order.totalAmount}`, 350, yPosition + 30);
+    
+    // Footer
+    doc.fontSize(10).text('Thank you for your business!', 50, yPosition + 80);
+    doc.text('SoftGlow - Premium Candles', 50, yPosition + 100);
+    
+    // Finalize the PDF
+    doc.end();
+
+  } catch (error) {
+    console.error('Error generating invoice:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 module.exports = {
   validateCustomerData,
   createRazorpayOrder,
@@ -513,5 +824,8 @@ module.exports = {
   getCustomerOrders,
   getOrderDetails,
   getAllOrders,
-  updateOrderStatus
+  updateOrderStatus,
+  cancelOrder,
+  returnOrder,
+  generateInvoice
 };
