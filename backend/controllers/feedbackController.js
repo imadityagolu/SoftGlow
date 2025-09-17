@@ -174,7 +174,7 @@ const getFeedbackByProduct = async (req, res) => {
     const ratingStats = await Feedback.aggregate([
       { 
         $match: { 
-          product: mongoose.Types.ObjectId(productId),
+          product: new mongoose.Types.ObjectId(productId),
           isVisible: true 
         } 
       },

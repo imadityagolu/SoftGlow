@@ -104,7 +104,7 @@ const FeedbackModal = ({ show, onClose, order, onFeedbackSubmitted }) => {
       if (image) {
         try {
           const imageResponse = await feedbackService.uploadFeedbackImage(image);
-          imageUrl = imageResponse.imageUrl;
+          imageUrl = imageResponse.data.image;
         } catch (imageError) {
           console.error('Error uploading image:', imageError);
           toast.warning('Failed to upload image, but feedback will be submitted without it');
