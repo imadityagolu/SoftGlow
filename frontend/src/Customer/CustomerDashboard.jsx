@@ -8,6 +8,7 @@ import orderService from '../services/orderService';
 import { getImageUrl } from '../utils/imageUtils';
 import { toast } from 'react-toastify';
 import NotificationSection from '../components/NotificationSection';
+import FeedbackModal from '../components/FeedbackModal';
 
 const CustomerDashboard = () => {
   const navigate = useNavigate();
@@ -36,6 +37,7 @@ const CustomerDashboard = () => {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [cancelOrderModal, setCancelOrderModal] = useState({ show: false, orderId: null, orderNumber: '' });
   const [returnOrderModal, setReturnOrderModal] = useState({ show: false, orderId: null, orderNumber: '' });
+  const [feedbackModal, setFeedbackModal] = useState({ show: false, order: null });
 
   const handleLogout = () => {
     logout();
@@ -211,6 +213,16 @@ const CustomerDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle feedback modal
+  const handleGiveFeedback = (order) => {
+    setFeedbackModal({ show: true, order });
+  };
+
+  const handleFeedbackSubmitted = () => {
+    // Optionally refresh orders or show success message
+    fetchOrders();
   };
 
   // Handle cart quantity update
@@ -472,6 +484,29 @@ const CustomerDashboard = () => {
     return hoursDiff <= 24;
   };
 
+  // Check if order is after 24 hours of completion (for feedback button)
+  const isAfter24Hours = (order) => {
+    if (order.status?.toLowerCase() !== 'completed') {
+      return false;
+    }
+    
+    // Use deliveryDate if available, otherwise use updatedAt timestamp
+    let completedTime;
+    if (order.deliveryDate) {
+      completedTime = new Date(order.deliveryDate);
+    } else if (order.updatedAt) {
+      completedTime = new Date(order.updatedAt);
+    } else {
+      return false;
+    }
+    
+    const now = new Date();
+    const timeDiff = now - completedTime;
+    const hoursDiff = timeDiff / (1000 * 60 * 60); // Convert to hours
+    
+    return hoursDiff > 24;
+  };
+
   // Handle return order
   const handleReturnOrder = (orderId, orderNumber) => {
     setReturnOrderModal({ show: true, orderId, orderNumber });
@@ -579,7 +614,7 @@ const CustomerDashboard = () => {
                               onClick={() => setCancelOrderModal({ show: true, orderId: order._id, orderNumber: order.orderNumber })}
                               className="w-full bg-red-600 text-white py-1 px-3 rounded-lg hover:bg-red-700 transition-colors text-xs"
                             >
-                              ❌ Cancel Order
+                              Cancel Order
                             </button>
                           )}
                           {order.status?.toLowerCase() === 'completed' && (
@@ -596,6 +631,14 @@ const CustomerDashboard = () => {
                                   className="bg-orange-600 text-white py-1 px-3 rounded-lg hover:bg-orange-700 transition-colors text-xs"
                                 >
                                   ☢️ Return
+                                </button>
+                              )}
+                              {isAfter24Hours(order) && (
+                                <button
+                                  onClick={() => handleGiveFeedback(order)}
+                                  className="bg-green-600 text-white py-1 px-3 rounded-lg hover:bg-green-700 transition-colors text-xs"
+                                >
+                                  💬 Feedback
                                 </button>
                               )}
                             </div>
@@ -1124,6 +1167,14 @@ const CustomerDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        show={feedbackModal.show}
+        onClose={() => setFeedbackModal({ show: false, order: null })}
+        order={feedbackModal.order}
+        onFeedbackSubmitted={handleFeedbackSubmitted}
+      />
     </div>
   );
 };
