@@ -131,6 +131,31 @@ const CustomerDashboard = () => {
   // Handle profile form changes
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
+    
+    // Phone number validation
+    if (name === 'phone') {
+      // Remove all non-digit characters
+      const digitsOnly = value.replace(/\D/g, '');
+      
+      // Check if length is more than 10 digits
+      if (digitsOnly.length > 10) {
+        toast.error('Phone number cannot be more than 10 digits');
+        return; // Don't update the state
+      }
+      
+      // Check if length is less than 10 digits and user is trying to submit (on blur we'll check)
+      if (digitsOnly.length > 0 && digitsOnly.length < 10) {
+        // We'll show this error on blur or form submit, not on every keystroke
+      }
+      
+      // Update with digits only
+      setProfileData(prev => ({
+        ...prev,
+        [name]: digitsOnly
+      }));
+      return;
+    }
+    
     if (name.startsWith('address.')) {
       const addressField = name.split('.')[1];
       setProfileData(prev => ({
@@ -146,6 +171,24 @@ const CustomerDashboard = () => {
         [name]: value
       }));
     }
+  };
+
+  // Handle phone number validation on blur
+  const handlePhoneBlur = () => {
+    const phoneValue = profileData.phone;
+    if (phoneValue && phoneValue.length > 0 && phoneValue.length < 10) {
+      // toast.error('Phone number must be 10 digits');
+    }
+  };
+
+  // Validate phone number before form submission
+  const validatePhoneNumber = () => {
+    const phoneValue = profileData.phone;
+    if (phoneValue && phoneValue.length > 0 && phoneValue.length !== 10) {
+      toast.error('Phone number must be exactly 10 digits');
+      return false;
+    }
+    return true;
   };
 
   // Handle profile update
@@ -212,6 +255,12 @@ const CustomerDashboard = () => {
   // Handle profile form submission
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate phone number before submission
+    if (!validatePhoneNumber()) {
+      return; // Stop form submission if phone validation fails
+    }
+    
     try {
       setLoading(true);
       const response = await customerService.updateProfile(profileData, token);
@@ -459,6 +508,7 @@ const CustomerDashboard = () => {
             
           </div>
         );
+
       case 'orders':
         return (
           <div className="bg-white rounded-lg shadow">
@@ -492,9 +542,9 @@ const CustomerDashboard = () => {
                     {orders.map((order) => (
                       <tr key={order._id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {order.orderNumber}
+                          🎫 {order.orderNumber}
                           <br/>
-                          <span style={{color:'#ccc'}}>{new Date(order.orderDate).toLocaleDateString('en-IN', {
+                          <span style={{color:'#ccc'}}> 🕓 {new Date(order.orderDate).toLocaleDateString('en-IN', {
                             year: 'numeric',
                             month: 'short',
                             day: 'numeric'
@@ -529,7 +579,7 @@ const CustomerDashboard = () => {
                               onClick={() => setCancelOrderModal({ show: true, orderId: order._id, orderNumber: order.orderNumber })}
                               className="w-full bg-red-600 text-white py-1 px-3 rounded-lg hover:bg-red-700 transition-colors text-xs"
                             >
-                              Cancel Order
+                              ❌ Cancel Order
                             </button>
                           )}
                           {order.status?.toLowerCase() === 'completed' && (
@@ -538,14 +588,14 @@ const CustomerDashboard = () => {
                                 onClick={() => handleDownloadInvoice(order._id)}
                                 className="bg-blue-600 text-white py-1 px-3 rounded-lg hover:bg-blue-700 transition-colors text-xs"
                               >
-                                Download Invoice
+                                ⬇️ Invoice
                               </button>
                               {isWithin24Hours(order) && (
                                 <button
                                   onClick={() => handleReturnOrder(order._id, order.orderNumber)}
                                   className="bg-orange-600 text-white py-1 px-3 rounded-lg hover:bg-orange-700 transition-colors text-xs"
                                 >
-                                  Return
+                                  ☢️ Return
                                 </button>
                               )}
                             </div>
@@ -564,6 +614,7 @@ const CustomerDashboard = () => {
             )}
           </div>
         );
+
       case 'favorites':
         return (
           <div className="bg-white rounded-lg shadow">
@@ -627,6 +678,7 @@ const CustomerDashboard = () => {
             )}
           </div>
         );
+
       case 'profile':
         return (
           <div className="bg-white rounded-lg shadow">
@@ -694,24 +746,26 @@ const CustomerDashboard = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone {user?.googleId && <span className="text-sm text-gray-500">(Optional)</span>}
+                      Phone {user?.googleId && <span className="text-sm text-gray-500"></span>}
                     </label>
                     <input 
                       type="tel" 
                       name="phone"
                       value={profileData.phone}
                       onChange={handleProfileChange}
+                      onBlur={handlePhoneBlur}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent" 
                       required={!user?.googleId}
-                      placeholder={user?.googleId ? "Add your phone number (optional)" : ""}
+                      placeholder={user?.googleId ? "Add your phone number (optional)" : "Enter 10-digit phone number"}
+                      maxLength="10"
                     />
                     {user?.googleId && !profileData.phone && (
-                      <p className="text-sm text-gray-500 mt-1">You can add your phone number for better account security and order updates.</p>
+                      <p className="text-sm text-gray-500 mt-1"></p>
                     )}
                   </div>
 
                   {/* Address Section */}
-                  <div className="border-t border-gray-200 pt-6">
+                  <div className="pt-1">
                     <h4 className="text-lg font-medium text-gray-900 mb-4">Address Information</h4>
                     
                     <div className="space-y-4">
@@ -800,6 +854,7 @@ const CustomerDashboard = () => {
             </div>
           </div>
         );
+
       case 'cart':
         return (
           <div className="bg-white rounded-lg shadow">
@@ -857,7 +912,7 @@ const CustomerDashboard = () => {
                           <p className="text-orange-600 font-bold">₹{item.product.price}</p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-5">
                         <div className="flex items-center space-x-2">
                           <button 
                             onClick={() => handleQuantityUpdate(item._id, item.quantity - 1)}
@@ -866,7 +921,7 @@ const CustomerDashboard = () => {
                           >
                             -
                           </button>
-                          <span className="w-4 text-center font-medium">{item.quantity}</span>
+                          <span className="w-4 text-center font-medium text-xl">{item.quantity}</span>
                           <button 
                             onClick={() => handleQuantityUpdate(item._id, item.quantity + 1)}
                             className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -875,14 +930,14 @@ const CustomerDashboard = () => {
                             +
                           </button>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-gray-900">₹{(item.product.price * item.quantity).toFixed(2)}</p>
+                        <div className="text-right flex gap-2">
+                          <p className="font-bold text-gray-900 text-xl items-center justify-center flex">₹{(item.product.price * item.quantity).toFixed(2)}</p>
                           <button 
                             onClick={() => handleRemoveItem(item._id)}
-                            className="text-red-600 hover:text-red-800 text-sm transition-colors p-1 rounded hover:bg-red-50"
+                            className="text-red-600 hover:text-red-800 text-lg transition-colors p-1 rounded hover:bg-red-50"
                             title="Remove item"
                           >
-                            🗑️ remove
+                            ❌
                           </button>
                         </div>
                       </div>

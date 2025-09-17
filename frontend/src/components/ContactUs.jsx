@@ -21,15 +21,21 @@ const ContactUs = () => {
     // Phone number validation - only allow digits and limit to 10 characters
     if (name === 'phone') {
       const phoneValue = value.replace(/\D/g, ''); // Remove non-digits
-      if (phoneValue.length <= 10) {
-        setFormData({
-          ...formData,
-          [name]: phoneValue
-        });
-        // Clear phone error if valid length
-        if (phoneValue.length === 10) {
-          setErrors(prev => ({ ...prev, phone: '' }));
-        }
+      
+      // Check if user is trying to enter more than 10 digits
+      if (phoneValue.length > 10) {
+        toast.error('Phone number cannot be more than 10 digits');
+        return; // Don't update the state
+      }
+      
+      setFormData({
+        ...formData,
+        [name]: phoneValue
+      });
+      
+      // Clear phone error if valid length
+      if (phoneValue.length === 10) {
+        setErrors(prev => ({ ...prev, phone: '' }));
       }
       return;
     }
@@ -42,6 +48,15 @@ const ContactUs = () => {
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  // Handle phone number validation on blur
+  const handlePhoneBlur = () => {
+    const phoneValue = formData.phone;
+    if (phoneValue && phoneValue.length > 0 && phoneValue.length < 10) {
+      toast.error('Phone number must be exactly 10 digits');
+      setErrors(prev => ({ ...prev, phone: 'Phone number must be exactly 10 digits' }));
     }
   };
 
@@ -199,10 +214,11 @@ const ContactUs = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
+                      onBlur={handlePhoneBlur}
                       className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-colors ${
                         errors.phone ? 'border-red-500' : 'border-gray-300'
                       }`}
-                      placeholder="1234567890"
+                      placeholder="Enter 10-digit phone number"
                       maxLength="10"
                     />
                     {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}

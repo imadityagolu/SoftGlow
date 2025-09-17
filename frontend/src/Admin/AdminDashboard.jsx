@@ -6,6 +6,7 @@ import productService from '../services/productService';
 import customerService from '../services/customerService';
 import orderService from '../services/orderService';
 import adminStatsService from '../services/adminStatsService';
+import contactService from '../services/contactService';
 import { getImageUrl } from '../utils/imageUtils';
 import NotificationSection from '../components/NotificationSection';
 
@@ -17,9 +18,11 @@ const AdminDashboard = () => {
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [contactsLoading, setContactsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [adminStats, setAdminStats] = useState({
@@ -107,6 +110,20 @@ const AdminDashboard = () => {
     }
   };
 
+  // Fetch contacts from API
+  const fetchContacts = async () => {
+    try {
+      setContactsLoading(true);
+      const response = await contactService.getAllContacts({ limit: 50 }, token);
+      setContacts(response.data?.contacts || []);
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+      toast.error('Error fetching contacts: ' + error.message);
+    } finally {
+      setContactsLoading(false);
+    }
+  };
+
   // Fetch admin statistics
   const fetchAdminStats = async () => {
     try {
@@ -144,6 +161,18 @@ const AdminDashboard = () => {
       fetchOrders();
     } catch (error) {
       toast.error('Error updating order status: ' + error.message);
+    }
+  };
+
+  // Update contact status
+  const updateContactStatus = async (contactId, newStatus) => {
+    try {
+      await contactService.updateContactStatus(contactId, newStatus, '', token);
+      toast.success(`Contact status updated to ${newStatus} successfully!`);
+      // Refresh contacts list
+      fetchContacts();
+    } catch (error) {
+      toast.error('Error updating contact status: ' + error.message);
     }
   };
 
@@ -286,6 +315,8 @@ const AdminDashboard = () => {
       fetchCustomers();
     } else if (activeTab === 'orders') {
       fetchOrders();
+    } else if (activeTab === 'contacts') {
+      fetchContacts();
     }
   }, [activeTab]);
 
@@ -504,13 +535,13 @@ const AdminDashboard = () => {
                             onClick={() => startEditProduct(product)}
                             className="text-amber-600 hover:text-amber-900 mr-3"
                           >
-                            Edit
+                            📝
                           </button>
                           <button 
                             onClick={() => showDeleteConfirmation(product)}
                             className="text-red-600 hover:text-red-900"
                           >
-                            Delete
+                            🗑
                           </button>
                         </td>
                       </tr>
@@ -953,18 +984,18 @@ const AdminDashboard = () => {
                     {orders.map((order) => (
                       <tr key={order._id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {order.orderNumber}
+                          🎫 {order.orderNumber}
                           <br/>
-                          {new Date(order.createdAt).toLocaleDateString()}
+                          <span className="text-xs text-gray-500">🕔 {new Date(order.createdAt).toLocaleDateString()}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{order.customerName || `${order.customer?.firstName || ''} ${order.customer?.lastName || ''}`.trim() || 'N/A'}</div>
-                          <div className="text-sm text-gray-900">{order.customerPhone || order.customer?.phone || 'N/A'}</div>
-                          <div className="text-sm text-gray-500">{order.customerEmail || order.customer?.email || 'N/A'}</div>
+                          <div className="text-sm text-gray-900">🙋🏼 {order.customerName || `${order.customer?.firstName || ''} ${order.customer?.lastName || ''}`.trim() || 'N/A'}</div>
+                          <div className="text-sm text-gray-900">📞 {order.customerPhone || order.customer?.phone || 'N/A'}</div>
+                          <div className="text-sm text-gray-500">📬 {order.customerEmail || order.customer?.email || 'N/A'}</div>
                           <div className="text-sm text-gray-900">
                             {order.customer?.address ? (
                               <>
-                                <div>{order.customer.address.street || 'N/A'}</div>
+                                <div>📍 {order.customer.address.street || 'N/A'}</div>
                                 <div>{order.customer.address.city || 'N/A'}, {order.customer.address.state || 'N/A'}</div>
                                 <div>{order.customer.address.zipCode || 'N/A'}, {order.customer.address.country || 'N/A'}</div>
                               </>
@@ -1063,11 +1094,11 @@ const AdminDashboard = () => {
                           <div className="flex items-center">
                             <div className="">
                               <div className="text-sm font-medium text-gray-900">
-                                {customer.firstName} {customer.lastName}
+                                🙋🏼 {customer.firstName} {customer.lastName}
                                 <br/>
-                                {customer.email}
+                                📬 <a href={`mailto:${customer.email}`} className="hover:text-white transition-colors">{customer.email}</a>
                                 <br/>
-                                {customer.phone || 'N/A'}
+                                📞 <a href={`https://api.whatsapp.com/send?phone=${customer.phone}`} target='_blank' className="hover:text-white transition-colors">{customer.phone || 'N/A'}</a>
                                 <br/>
                                 <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             customer.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -1079,7 +1110,7 @@ const AdminDashboard = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {customer.address?.street || 'N/A'}
+                          📍 {customer.address?.street || 'N/A'}
                           <br/>
                           {customer.address?.city || 'N/A'} - {customer.address?.zipCode || 'N/A'}
                           <br/>
@@ -1100,7 +1131,7 @@ const AdminDashboard = () => {
                             onClick={() => toggleCustomerStatus(customer._id, !customer.isActive)}
                             className={`${customer.isActive ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'}`}
                           >
-                            {customer.isActive ? 'Deactivate' : 'Activate'}
+                            🕹 {customer.isActive ? 'Deactivate' : 'Activate'}
                           </button>
                         </td>
                       </tr>
@@ -1111,6 +1142,92 @@ const AdminDashboard = () => {
             )}
           </div>
         );
+
+      case 'contacts':
+        return (
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-medium text-gray-900">Contact Submissions: {contacts.length}</h3>
+            </div>
+            
+            {contactsLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600"></div>
+                <span className="ml-2 text-gray-600">Loading contacts...</span>
+              </div>
+            ) : contacts.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600">No contact submissions found.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Info</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {contacts.map((contact) => (
+                      <tr key={contact._id}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">
+                            🙋🏼 {contact.name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            📬 <a href={`mailto:${contact.email}`} className="hover:text-white transition-colors">{contact.email}</a>
+                          </div>
+                          {contact.phone && (
+                            <div className="text-sm text-gray-500">
+                              📞 <a href={`https://api.whatsapp.com/send?phone=${contact.phone}`} target='_blank' className="hover:text-white transition-colors">
+                                {contact.phone}
+                              </a>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-900 max-w-xs truncate">
+                            🔖 : {contact.subject || 'No Subject'}
+                            <br/>
+                            📑 - {contact.message}
+                            <br/>
+                            <span className="text-xs text-gray-500">🕔 {new Date(contact.createdAt).toLocaleDateString()} - {new Date(contact.createdAt).toLocaleTimeString()}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            contact.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                            contact.status === 'replied' ? 'bg-blue-100 text-blue-800' :
+                            contact.status === 'read' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {contact.status || 'new'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <select
+                            value={contact.status || 'new'}
+                            onChange={(e) => updateContactStatus(contact._id, e.target.value)}
+                            className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          >
+                            <option value="new">New</option>
+                            <option value="read">Read</option>
+                            <option value="replied">Replied</option>
+                            <option value="resolved">Resolved</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return null;
     }
@@ -1133,10 +1250,10 @@ const AdminDashboard = () => {
                 </svg>
               </button>
               <span className="text-2xl mr-3">🕯️</span>
-              <h1 className="text-2xl font-bold text-gray-900">SoftGlow Admin</h1>
+              <h1 className="text-2xl font-bold text-gray-900">SoftGlow</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-700">Welcome, {user?.firstName || 'Admin'}</span>
+              <span className="text-sm text-gray-700">{user?.firstName || 'Admin'}</span>
               <button
                 onClick={handleLogout}
                 className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
@@ -1151,10 +1268,10 @@ const AdminDashboard = () => {
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex">
           {/* Sidebar */}
-          <div className={`${sidebarOpen ? 'fixed inset-y-0 left-0 transform translate-x-0' : 'fixed inset-y-0 left-0 transform -translate-x-full'} lg:relative lg:translate-x-0 lg:block w-64 bg-white lg:rounded-lg shadow-lg lg:mr-8 z-30 lg:z-auto transition-transform duration-300 ease-in-out`}>
+          <div className={`${sidebarOpen ? 'fixed inset-y-0 left-0 transform translate-x-0 ' : 'fixed inset-y-0 left-0 transform -translate-x-full'} lg:relative lg:translate-x-0 lg:block w-64 bg-white lg:rounded-lg shadow-lg lg:mr-8 z-30 lg:z-auto transition-transform duration-300 ease-in-out`}>
             {/* Mobile header with close button */}
             <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50">
-              <h2 className="text-lg font-semibold text-gray-900">SoftGlow Admin</h2>
+              <h2 className="text-lg font-semibold text-gray-900">🕯️ SoftGlow</h2>
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-white transition-colors"
@@ -1172,7 +1289,8 @@ const AdminDashboard = () => {
                   { id: 'products', label: 'Products', icon: '🕯️' },
                   { id: 'add-product', label: 'Add Product', icon: '➕' },
                   { id: 'orders', label: 'Orders', icon: '📦' },
-                  { id: 'customers', label: 'Customers', icon: '👥' }
+                  { id: 'customers', label: 'Customers', icon: '👥' },
+                  { id: 'contacts', label: 'Contacts', icon: '📧' }
                 ].map((item) => (
                   <button
                     key={item.id}
@@ -1197,7 +1315,7 @@ const AdminDashboard = () => {
           {/* Overlay for mobile */}
           {sidebarOpen && (
             <div 
-              className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-20 transition-opacity duration-300 ease-in-out"
+              className="lg:hidden fixed inset-0 bg-opacity-20 backdrop-blur-sm z-20 transition-opacity duration-300 ease-in-out"
               onClick={() => setSidebarOpen(false)}
             />
           )}
@@ -1211,7 +1329,7 @@ const AdminDashboard = () => {
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmation.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-opacity-20 backdrop-blur-sm">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
             <div className="flex items-center mb-4">
               <div className="flex-shrink-0">

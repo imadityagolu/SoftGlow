@@ -13,7 +13,7 @@ const Home = () => {
 
   const heroSlides = [
     {
-      title: "Indulge in the",
+      title: "Indulge in",
       subtitle: "Finest Premium Candles",
       description: "Taste the difference with every light",
       image: "🕯️",
@@ -272,7 +272,7 @@ const Home = () => {
             ) : featuredProducts.length > 0 ? (
               featuredProducts.map((product, index) => (
                 <div key={product.id || index} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                  <div className="bg-gradient-to-br from-amber-100 to-orange-100 p-4 text-center relative overflow-hidden" style={{height: '200px'}}>
+                  <div className="bg-gradient-to-br from-amber-100 to-orange-100 p-4 text-center relative overflow-hidden" style={{height: '350px'}}>
                     {product.images && product.images.length > 0 ? (
                       <img 
                         src={getImageUrl(product.images[currentImageIndexes[product.id] || 0])} 
