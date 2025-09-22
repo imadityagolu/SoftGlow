@@ -21,6 +21,9 @@ import CustomerLogin from './Customer/CustomerLogin';
 import CustomerSignup from './Customer/CustomerSignup';
 import CustomerDashboard from './Customer/CustomerDashboard';
 import OAuthSuccess from './Customer/OAuthSuccess';
+import ForgotPassword from './Customer/ForgotPassword';
+import VerifyOTP from './Customer/VerifyOTP';
+import ResetPassword from './Customer/ResetPassword';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Import Auth Context
@@ -63,6 +66,12 @@ function App() {
             <Route path="/customer/login" element={<CustomerLogin />} />
           <Route path="/customer/signup" element={<CustomerSignup />} />
           <Route path="/customer/oauth-success" element={<OAuthSuccess />} />
+          
+          {/* Forgot Password Routes */}
+          <Route path="/customer/forgot-password" element={<ForgotPassword />} />
+          <Route path="/customer/verify-otp" element={<VerifyOTP />} />
+          <Route path="/customer/reset-password" element={<ResetPassword />} />
+          
             <Route path="/customer/dashboard" element={
               <ProtectedRoute requiredUserType="customer">
                 <CustomerDashboard />

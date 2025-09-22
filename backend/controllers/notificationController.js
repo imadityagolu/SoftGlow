@@ -5,6 +5,8 @@ const getNotifications = async (req, res) => {
   try {
     const { userId, userType } = req.query;
     
+    // console.log('🔍 Fetching notifications for:', { userId, userType });
+    
     if (!userId || !userType) {
       return res.status(400).json({ message: 'userId and userType are required' });
     }
@@ -16,6 +18,9 @@ const getNotifications = async (req, res) => {
     .populate('orderId', 'orderNumber totalAmount')
     .sort({ createdAt: -1 })
     .limit(50); // Limit to last 50 notifications
+
+    // console.log('📬 Found notifications:', notifications.length);
+    // console.log('📬 Notifications:', notifications.map(n => ({ id: n._id, message: n.message.substring(0, 50) + '...', userId: n.userId })));
 
     res.status(200).json({
       success: true,

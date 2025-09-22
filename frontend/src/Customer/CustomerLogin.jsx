@@ -142,9 +142,9 @@ const CustomerLogin = () => {
               </div>
 
               <div className="text-sm">
-                <a href="#" className="font-medium text-orange-600 hover:text-orange-500">
+                <Link to="/customer/forgot-password" className="font-medium text-orange-600 hover:text-orange-500">
                   Forgot password?
-                </a>
+                </Link>
               </div>
             </div>
 
