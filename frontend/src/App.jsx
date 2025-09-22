@@ -13,6 +13,7 @@ import ContactUs from './components/ContactUs';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsConditions from './components/TermsConditions';
 import CancelReturnPolicy from './components/CancelReturnPolicy';
+import PageNotFound from './components/PageNotFound';
 import AdminLogin from './Admin/AdminLogin';
 import AdminSignup from './Admin/AdminSignup';
 import AdminDashboard from './Admin/AdminDashboard';
@@ -68,8 +69,8 @@ function App() {
               </ProtectedRoute>
             } />
             
-            {/* Fallback route */}
-            <Route path="*" element={<Home />} />
+            {/* 404 Page Not Found route */}
+            <Route path="*" element={<PageNotFound />} />
           </Routes>
       </div>
           </Router>

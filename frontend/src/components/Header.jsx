@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useFavorites } from '../contexts/FavoritesContext';
+import logoImage from '../assets/logo.png';
 
 const Header = () => {
   const { isAuthenticated, isCustomer, logout, user } = useAuth();
@@ -40,8 +41,8 @@ const Header = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <Link to="/" className="flex items-center">
-            <span className="text-3xl mr-3">🕯️</span>
-            <span className="text-2xl font-bold text-gray-900">SoftGlow</span>
+            <img src={logoImage} alt="Logo" className="h-8 w-8 mr-2" />
+            <span className="text-xl font-bold text-gray-900">{import.meta.env.VITE_COMPANY_NAME}</span>
           </Link>
           
           <div className="hidden md:flex items-center space-x-8">

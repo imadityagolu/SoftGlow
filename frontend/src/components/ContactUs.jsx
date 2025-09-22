@@ -309,10 +309,10 @@ const ContactUs = () => {
                     <div>
                       <h3 className="font-semibold text-gray-800 mb-1">Email Us</h3>
                       <a 
-                        href="mailto:adityasng420.ak@gmail.com" 
+                        href={`mailto:${import.meta.env.VITE_EMAIL}`} 
                         className="text-orange-600 hover:text-orange-700 transition-colors"
                       >
-                        softglow@gmail.com
+                        {import.meta.env.VITE_EMAIL}
                       </a>
                     </div>
                   </div>
@@ -324,12 +324,12 @@ const ContactUs = () => {
                     <div>
                       <h3 className="font-semibold text-gray-800 mb-1">WhatsApp</h3>
                       <a 
-                        href="https://api.whatsapp.com/send?phone=918083079692" 
+                        href={`https://api.whatsapp.com/send?phone=91${import.meta.env.VITE_PHONE}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="text-orange-600 hover:text-orange-700 transition-colors"
                       >
-                        +91 8083079692
+                        +91 {import.meta.env.VITE_PHONE}
                       </a>
                     </div>
                   </div>
@@ -341,12 +341,12 @@ const ContactUs = () => {
                     <div>
                       <h3 className="font-semibold text-gray-800 mb-1">Follow Us</h3>
                       <a 
-                        href="https://www.instagram.com/_.softglow/" 
+                        href={`https://www.instagram.com/${import.meta.env.VITE_INSTA_LINK}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="text-orange-600 hover:text-orange-700 transition-colors"
                       >
-                        @_.softglow
+                        {import.meta.env.VITE_INSTA_LINK}
                       </a>
                     </div>
                   </div>

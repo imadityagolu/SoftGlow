@@ -482,72 +482,79 @@ const AdminDashboard = () => {
                 <p className="text-gray-600">No products found. Add your first product!</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                      {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th> */}
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {products.map((product) => (
-                      <tr key={product._id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              {product.images && product.images.length > 0 ? (
-                                <img className="h-10 w-10 object-cover" src={getImageUrl(product.images[0])} alt={product.name} />
-                              ) : (
-                                <div className="h-10 w-10 bg-gray-300 flex items-center justify-center">
-                                  <span className="text-gray-600 text-xs">No Image</span>
-                                </div>
-                              )}
-                            </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                              <div className="text-sm text-gray-500">{product.description?.substring(0, 50)}...</div>
-                            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
+                {products.map((product) => (
+                  <div key={product._id} className="bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 border border-amber-200 rounded-xl p-4 shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105">
+                    {/* Product Image */}
+                    <div className="mb-3">
+                      <div className="w-full h-100 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                        {product.images && product.images.length > 0 ? (
+                          <img 
+                            className="w-full h-full object-cover" 
+                            src={getImageUrl(product.images[0])} 
+                            alt={product.name}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center" style={{display: product.images && product.images.length > 0 ? 'none' : 'flex'}}>
+                          <span className="text-gray-500 text-sm">📷 No Image</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Product Info */}
+                    <div className="mb-3">
+                      <div className="flex items-start justify-between mb-1">
+                        <h4 className="font-semibold text-gray-900 text-sm leading-tight flex-1 mr-1">
+                          {product.name}
+                        </h4>
+                        <span className="inline-flex px-1.5 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800 capitalize whitespace-nowrap">
+                          {product.category}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+                        {product.description}
+                      </p>
+                    </div>
+
+                    {/* Price and Quantity */}
+                    <div className="mb-3">
+                      <div className="bg-white rounded-lg p-2 border border-amber-200 shadow-sm">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Price</p>
+                            <p className="text-lg font-bold text-amber-600">₹{product.price?.toFixed(2)}</p>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="capitalize text-sm text-gray-900">{product.category}</span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ₹{product.price?.toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {product.quantity}
-                        </td>
-                        {/* <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            product.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {product.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td> */}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button 
-                            onClick={() => startEditProduct(product)}
-                            className="text-amber-600 hover:text-amber-900 mr-3"
-                          >
-                            📝
-                          </button>
-                          <button 
-                            onClick={() => showDeleteConfirmation(product)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            🗑
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <div className="text-right">
+                            <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">Stock</p>
+                            <p className="text-sm font-semibold text-gray-800">{product.quantity}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-1">
+                      <button 
+                        onClick={() => startEditProduct(product)}
+                        className="flex-1 bg-amber-600 hover:bg-amber-700 text-white py-1.5 px-2 rounded-lg transition-colors text-xs font-medium flex items-center justify-center space-x-1"
+                      >
+                        <span>✏️</span>
+                        <span>Edit</span>
+                      </button>
+                      <button 
+                        onClick={() => showDeleteConfirmation(product)}
+                        className="flex-1 bg-red-500 hover:bg-red-600 text-white py-1.5 px-2 rounded-lg transition-colors text-xs font-medium flex items-center justify-center space-x-1"
+                      >
+                        <span>🗑️</span>
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -935,7 +942,7 @@ const AdminDashboard = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 />
               </div>
-              <div className="sm:w-48">
+              <div className="w-full sm:w-48">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Filter by Status
                 </label>
@@ -967,93 +974,112 @@ const AdminDashboard = () => {
                 <p className="text-gray-500">No orders found</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment ID</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {orders.map((order) => (
-                      <tr key={order._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+                {orders.map((order) => (
+                  <div key={order._id} className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105 p-6">
+                    {/* Order Header */}
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                           🎫 {order.orderNumber}
-                          <br/>
-                          <span className="text-xs text-gray-500">🕔 {new Date(order.createdAt).toLocaleDateString()}</span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">🙋🏼 {order.customerName || `${order.customer?.firstName || ''} ${order.customer?.lastName || ''}`.trim() || 'N/A'}</div>
-                          <div className="text-sm text-gray-900">📞 {order.customerPhone || order.customer?.phone || 'N/A'}</div>
-                          <div className="text-sm text-gray-500">📬 {order.customerEmail || order.customer?.email || 'N/A'}</div>
-                          <div className="text-sm text-gray-900">
-                            {order.customer?.address ? (
-                              <>
-                                <div>📍 {order.customer.address.street || 'N/A'}</div>
-                                <div>{order.customer.address.city || 'N/A'}, {order.customer.address.state || 'N/A'}</div>
-                                <div>{order.customer.address.zipCode || 'N/A'}, {order.customer.address.country || 'N/A'}</div>
-                              </>
-                            ) : (
-                              <div className="text-gray-500">No address available</div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-xs text-gray-500 space-y-1">
-                            {order.items?.slice(0, 3).map((item, index) => (
-                              <div key={index} className="flex justify-between">
-                                <span className="truncate mr-2">{item.name}</span>
-                                <span className="text-gray-700 font-medium">x{item.quantity}</span>
-                              </div>
-                            ))}
-                            {order.items?.length > 3 && (
-                              <div className="text-gray-400 text-center">+{order.items.length - 3} more items</div>
-                            )}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        </h4>
+                        <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                          🕔 {new Date(order.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-green-600">
                           ₹{order.totalAmount?.toFixed(2) || '0.00'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {order.razorpayPaymentId || 'N/A'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                            order.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
-                            order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
-                            order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                            order.status === 'refunded' ? 'bg-purple-100 text-purple-800' :
-                            order.status === 'return' ? 'bg-orange-100 text-orange-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Unknown'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <select
-                            value={order.status}
-                            onChange={(e) => updateOrderStatus(order._id, e.target.value)}
-                            className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="processing">Processing</option>
-                            <option value="shipped">Shipped</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
-                            <option value="refunded">Refunded</option>
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Customer Info */}
+                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                      <h5 className="text-sm font-medium text-gray-700 mb-2">Customer Details</h5>
+                      <div className="space-y-1">
+                        <p className="text-sm text-gray-900 flex items-center gap-2">
+                          🙋🏼 {order.customerName || `${order.customer?.firstName || ''} ${order.customer?.lastName || ''}`.trim() || 'N/A'}
+                        </p>
+                        <p className="text-sm text-gray-700 flex items-center gap-2">
+                          📞 <a href={`tel:${order.customerPhone || order.customer?.phone}`} className="hover:text-blue-600">
+                            {order.customerPhone || order.customer?.phone || 'N/A'}
+                          </a>
+                        </p>
+                        <p className="text-sm text-gray-700 flex items-center gap-2">
+                          📬 <a href={`mailto:${order.customerEmail || order.customer?.email}`} className="hover:text-blue-600">
+                            {order.customerEmail || order.customer?.email || 'N/A'}
+                          </a>
+                        </p>
+                        <div className="text-sm text-gray-700">
+                          {order.customer?.address ? (
+                            <div className="flex items-start gap-2">
+                              <span>📍</span>
+                              <div>
+                                <div>{order.customer.address.street || 'N/A'}</div>
+                                <div>{order.customer.address.city || 'N/A'}, {order.customer.address.state || 'N/A'}, {order.customer.address.zipCode || 'N/A'}, {order.customer.address.country || 'N/A'}</div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-gray-500 flex items-center gap-2">📍 No address available</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Items */}
+                    <div className="mb-4 p-3 bg-amber-50 rounded-lg">
+                      <h5 className="text-sm font-medium text-gray-700 mb-2">Order Items</h5>
+                      <div className="space-y-2">
+                        {order.items?.slice(0, 3).map((item, index) => (
+                          <div key={index} className="flex justify-between items-center text-sm">
+                            <span className="text-gray-900 truncate flex-1 mr-2">{item.name}</span>
+                            <span className="text-gray-700 font-medium bg-white px-2 py-1 rounded">x{item.quantity}</span>
+                          </div>
+                        ))}
+                        {order.items?.length > 3 && (
+                          <div className="text-gray-500 text-center text-sm bg-white px-2 py-1 rounded">
+                            +{order.items.length - 3} more items
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Payment Info */}
+                    <div className="mb-4 p-3 bg-purple-50 rounded-lg">
+                      <p className="text-sm text-gray-900">
+                        <span className="font-medium">Payment ID:</span> {order.razorpayPaymentId || 'N/A'}
+                      </p>
+                    </div>
+
+                    {/* Status and Actions */}
+                    <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                      <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                        order.status === 'completed' ? 'bg-green-100 text-green-800' :
+                        order.status === 'processing' ? 'bg-yellow-100 text-yellow-800' :
+                        order.status === 'shipped' ? 'bg-blue-100 text-blue-800' :
+                        order.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                        order.status === 'refunded' ? 'bg-purple-100 text-purple-800' :
+                        order.status === 'return' ? 'bg-orange-100 text-orange-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Unknown'}
+                      </span>
+                      <select
+                        value={order.status}
+                        onChange={(e) => updateOrderStatus(order._id, e.target.value)}
+                        className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="refunded">Refunded</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
               </div>
              )}
            </div>
@@ -1063,7 +1089,7 @@ const AdminDashboard = () => {
         return (
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-medium text-gray-900">Customer: {customers.length}</h3>
+              <h3 className="text-lg font-medium text-gray-900">Customers: {customers.length}</h3>
             </div>
             
             {loading ? (
@@ -1076,68 +1102,85 @@ const AdminDashboard = () => {
                 <p className="text-gray-600">No customers found.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
-                      {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Joined</th> */}
-                      {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th> */}
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {customers.map((customer) => (
-                      <tr key={customer._id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div className="">
-                              <div className="text-sm font-medium text-gray-900">
-                                🙋🏼 {customer.firstName} {customer.lastName}
-                                <br/>
-                                📬 <a href={`mailto:${customer.email}`} className="hover:text-white transition-colors">{customer.email}</a>
-                                <br/>
-                                📞 <a href={`https://api.whatsapp.com/send?phone=${customer.phone}`} target='_blank' className="hover:text-white transition-colors">{customer.phone || 'N/A'}</a>
-                                <br/>
-                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            customer.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {customer.isActive ? 'Active' : 'Inactive'}
-                          </span> - {new Date(customer.createdAt).toLocaleDateString()}
-                              </div>
-                            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
+                {customers.map((customer) => (
+                  <div key={customer._id} className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 border border-blue-200 rounded-xl p-4 shadow-sm hover:shadow-lg transition-all duration-300 hover:scale-105">
+                    {/* Customer Profile */}
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                            {customer.firstName?.charAt(0)?.toUpperCase()}{customer.lastName?.charAt(0)?.toUpperCase()}
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          📍 {customer.address?.street || 'N/A'}
-                          <br/>
-                          {customer.address?.city || 'N/A'} - {customer.address?.zipCode || 'N/A'}
-                          <br/>
-                          {customer.address?.state || 'N/A'}, {customer.address?.country || 'N/A'}
-                        </td>
-                        {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {new Date(customer.createdAt).toLocaleDateString()}
-                        </td> */}
-                        {/* <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            customer.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {customer.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td> */}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button 
-                            onClick={() => toggleCustomerStatus(customer._id, !customer.isActive)}
-                            className={`${customer.isActive ? 'text-red-600 hover:text-red-900' : 'text-green-600 hover:text-green-900'}`}
-                          >
-                            🕹 {customer.isActive ? 'Deactivate' : 'Activate'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <div>
+                            <h4 className="font-semibold text-gray-900 text-sm leading-tight mb-1">
+                              {customer.firstName} {customer.lastName}
+                            </h4>
+                            <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
+                              customer.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {customer.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Contact Information */}
+                    <div className="">
+                      <div className="rounded-lg p-3">
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-blue-600">📬</span>
+                            <a href={`mailto:${customer.email}`} className="text-xs text-gray-700 hover:text-blue-600 transition-colors truncate">
+                              {customer.email}
+                            </a>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-green-600">📞</span>
+                            <a href={`https://api.whatsapp.com/send?phone=${customer.phone}`} target='_blank' className="text-xs text-gray-700 hover:text-green-600 transition-colors">
+                              {customer.phone || 'N/A'}
+                            </a>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-purple-600">📅</span>
+                            <span className="text-xs text-gray-600">
+                              {new Date(customer.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Address Information */}
+                    <div className="mb-3">
+                      <div className="rounded-lg p-3">
+                        <div className="flex items-start space-x-2">
+                          <span className="text-orange-600 mt-0.5">📍</span>
+                          <div className="text-xs text-gray-700 leading-relaxed">
+                            <div>{customer.address?.street || 'N/A'}</div>
+                            <div>{customer.address?.city || 'N/A'} - {customer.address?.zipCode || 'N/A'}, {customer.address?.state || 'N/A'}, {customer.address?.country || 'N/A'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <div>
+                      <button 
+                        onClick={() => toggleCustomerStatus(customer._id, !customer.isActive)}
+                        className={`w-full py-2 px-3 rounded-lg transition-all duration-300 text-xs font-medium flex items-center justify-center space-x-2 ${
+                          customer.isActive 
+                            ? 'bg-red-500 hover:bg-red-600 text-white shadow-sm hover:shadow-md' 
+                            : 'bg-green-500 hover:bg-green-600 text-white shadow-sm hover:shadow-md'
+                        }`}
+                      >
+                        <span>{customer.isActive ? '🔒' : '🔓'}</span>
+                        <span>{customer.isActive ? 'Deactivate' : 'Activate'}</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -1160,69 +1203,88 @@ const AdminDashboard = () => {
                 <p className="text-gray-600">No contact submissions found.</p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Info</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Message</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {contacts.map((contact) => (
-                      <tr key={contact._id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            🙋🏼 {contact.name}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
+                {contacts.map((contact) => (
+                  <div key={contact._id} className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1">
+                    
+                    {/* Contact Info Section */}
+                    <div className="mb-3">
+                      <div className="rounded-lg p-3">
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-blue-600">🙋🏼</span>
+                            <span className="text-sm font-medium text-gray-900 truncate">{contact.name}</span>
                           </div>
-                          <div className="text-sm text-gray-500">
-                            📬 <a href={`mailto:${contact.email}`} className="hover:text-white transition-colors">{contact.email}</a>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-green-600">📬</span>
+                            <a href={`mailto:${contact.email}`} className="text-xs text-gray-700 hover:text-blue-600 transition-colors truncate">
+                              {contact.email}
+                            </a>
                           </div>
                           {contact.phone && (
-                            <div className="text-sm text-gray-500">
-                              📞 <a href={`https://api.whatsapp.com/send?phone=${contact.phone}`} target='_blank' className="hover:text-white transition-colors">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-orange-600">📞</span>
+                              <a href={`https://api.whatsapp.com/send?phone=${contact.phone}`} target='_blank' className="text-xs text-gray-700 hover:text-green-600 transition-colors">
                                 {contact.phone}
                               </a>
                             </div>
                           )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900 max-w-xs truncate">
-                            🔖 : {contact.subject || 'No Subject'}
-                            <br/>
-                            📑 - {contact.message}
-                            <br/>
-                            <span className="text-xs text-gray-500">🕔 {new Date(contact.createdAt).toLocaleDateString()} - {new Date(contact.createdAt).toLocaleTimeString()}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-purple-600">🕔</span>
+                            <span className="text-xs text-gray-600">
+                              {new Date(contact.createdAt).toLocaleDateString()} - {new Date(contact.createdAt).toLocaleTimeString()}
+                            </span>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            contact.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                            contact.status === 'replied' ? 'bg-blue-100 text-blue-800' :
-                            contact.status === 'read' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {contact.status || 'new'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <select
-                            value={contact.status || 'new'}
-                            onChange={(e) => updateContactStatus(contact._id, e.target.value)}
-                            className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          >
-                            <option value="new">New</option>
-                            <option value="read">Read</option>
-                            <option value="replied">Replied</option>
-                            <option value="resolved">Resolved</option>
-                          </select>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Message Section */}
+                    <div className="mb-3">
+                      <div className="bg-white rounded-lg p-3 border border-blue-200 shadow-sm">
+                        <div className="space-y-2">
+                          <div className="flex items-start space-x-2">
+                            <span className="text-amber-600 mt-0.5">🔖</span>
+                            <div className="flex-1">
+                              <div className="text-xs font-medium text-gray-900 mb-1">
+                                {contact.subject || 'No Subject'}
+                              </div>
+                              <div className="text-xs text-gray-700 leading-relaxed line-clamp-3">
+                                {contact.message}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status and Action Section */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500 font-medium">Status:</span>
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          contact.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                          contact.status === 'replied' ? 'bg-blue-100 text-blue-800' :
+                          contact.status === 'read' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {contact.status || 'new'}
+                        </span>
+                      </div>
+                      
+                      <select
+                        value={contact.status || 'new'}
+                        onChange={(e) => updateContactStatus(contact._id, e.target.value)}
+                        className="w-full text-xs border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white shadow-sm hover:shadow-md transition-all duration-200"
+                      >
+                        <option value="new">New</option>
+                        <option value="read">Read</option>
+                        <option value="replied">Replied</option>
+                        <option value="resolved">Resolved</option>
+                      </select>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
