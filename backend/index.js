@@ -22,6 +22,7 @@ const favoriteRoutes = require('./routes/favorite');
 const adminStatsRoutes = require('./routes/adminStats');
 const contactRoutes = require('./routes/contact');
 const feedbackRoutes = require('./routes/feedback');
+const diagnosticRoutes = require('./routes/diagnostic');
 
 // CORS configuration - MUST be first to handle preflight requests
 const corsOptions = {
@@ -173,6 +174,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/favorites", favoriteRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/diagnostic", diagnosticRoutes);
 
 //starting server
 const PORT = process.env.PORT || 8827;

@@ -26,6 +26,9 @@ const sendOTPEmail = async (email, otp, firstName) => {
     console.log(`👤 Name: ${firstName}`);
     console.log(`🔐 OTP: ${otp}`);
     console.log('⏰ Valid for: 10 minutes');
+    console.log('🌍 Environment:', process.env.NODE_ENV || 'development');
+    console.log('📧 Email User:', process.env.EMAIL_USER ? '✅ Set' : '❌ Missing');
+    console.log('🔑 Email Pass:', process.env.EMAIL_PASS ? '✅ Set' : '❌ Missing');
     console.log('═══════════════════════════════════════\n');
 
     // Development mode - if no email password is set, just log the OTP
@@ -34,7 +37,13 @@ const sendOTPEmail = async (email, otp, firstName) => {
       return { success: true, message: 'OTP logged to console (development mode)' };
     }
 
+    console.log('📤 Attempting to create Gmail transporter...');
     const transporter = createTransporter();
+    
+    // Test the connection first
+    console.log('🔗 Testing SMTP connection...');
+    await transporter.verify();
+    console.log('✅ SMTP connection verified successfully!');
     
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -80,15 +89,29 @@ const sendOTPEmail = async (email, otp, firstName) => {
       `
     };
 
+    console.log('📧 Sending email with options:', {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject
+    });
+    
     const result = await transporter.sendMail(mailOptions);
     console.log('✅ Email sent successfully!');
-    return { success: true, messageId: result.messageId };
+    console.log('📧 Message ID:', result.messageId);
+    console.log('📧 Response:', result.response);
+    return { success: true, message: 'OTP email sent successfully' };
   } catch (error) {
-    console.error('❌ Email sending error:', error);
-    console.log('⚠️ Email failed but OTP is still valid for password reset');
-    // Return success anyway since OTP is generated and saved to database
-    // User can still use the OTP that's logged above
-    return { success: true, error: error.message, emailFailed: true };
+    console.error('\n❌ EMAIL SENDING FAILED ❌');
+    console.error('═══════════════════════════════════════');
+    console.error('Error Type:', error.name);
+    console.error('Error Message:', error.message);
+    console.error('Error Code:', error.code);
+    console.error('Error Command:', error.command);
+    console.error('Full Error:', error);
+    console.error('═══════════════════════════════════════\n');
+    
+    // Return success even if email fails to prevent blocking the OTP process
+    return { success: true, message: 'OTP generated (email delivery failed - check logs)' };
   }
 };
 
