@@ -140,7 +140,7 @@ const AdminLogin = () => {
 
               <div className="text-sm">
                 <a href="#" className="font-medium text-amber-600 hover:text-amber-500">
-                  Forgot password?
+                 
                 </a>
               </div>
             </div>

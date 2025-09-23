@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import authService from '../services/authService';
+import logoImage from '../assets/logo.png';
 
 const CustomerSignup = () => {
   const [formData, setFormData] = useState({
@@ -93,10 +94,10 @@ const CustomerSignup = () => {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-orange-100 mb-4">
-            <span className="text-2xl">🕯️</span>
+          <div className="mx-auto h-12 w-12 flex justify-center">
+            <img src={logoImage} alt="Logo" className="h-10 w-10 mr-3 rounded-full object-cover border-2 border-gray-400" />
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+          <h2 className=" text-3xl font-bold text-gray-900">
             Join SoftGlow
           </h2>
           <p className="mt-2 text-sm text-gray-600">
@@ -253,14 +254,14 @@ const CustomerSignup = () => {
               </div>
             </div>
 
-            <div>
+            <div className='w-full flex justify-center'>
               <button
                 type="button"
                 onClick={() => {
                     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8827';
                     window.location.href = `${backendUrl}/api/customer/auth/google`;
                   }}
-                className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors"
+                className="w-60 flex justify-center items-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors"
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -279,12 +280,6 @@ const CustomerSignup = () => {
                   Sign in here
                 </Link>
               </p>
-            </div>
-
-            <div className="text-center">
-              <Link to="/" className="text-sm text-gray-500 hover:text-gray-700">
-                ← Back to Home
-              </Link>
             </div>
           </form>
         </div>
