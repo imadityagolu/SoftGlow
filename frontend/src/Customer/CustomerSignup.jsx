@@ -257,9 +257,7 @@ const CustomerSignup = () => {
               <button
                 type="button"
                 onClick={() => {
-                    const backendUrl = import.meta.env.VITE_API_URL 
-                      ? import.meta.env.VITE_API_URL.replace('/api', '') 
-                      : (import.meta.env.VITE_BACKEND_URL || 'http://localhost:8827');
+                    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8827';
                     window.location.href = `${backendUrl}/api/customer/auth/google`;
                   }}
                 className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors"

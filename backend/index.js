@@ -25,9 +25,41 @@ const feedbackRoutes = require('./routes/feedback');
 
 // CORS configuration - MUST be first to handle preflight requests
 const corsOptions = {
-    origin: [
-        process.env.FRONTEND_URL
-    ],
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        const allowedOrigins = [
+            process.env.FRONTEND_URL,
+            'http://localhost:5173',
+            'http://localhost:5174',
+            'http://localhost:3000',
+            // Add your production frontend URLs here
+            process.env.PRODUCTION_FRONTEND_URL,
+            // Common Render/Netlify/Vercel patterns
+            /^https:\/\/.*\.onrender\.com$/,
+            /^https:\/\/.*\.netlify\.app$/,
+            /^https:\/\/.*\.vercel\.app$/,
+            /^https:\/\/.*\.herokuapp\.com$/
+        ].filter(Boolean); // Remove undefined values
+        
+        // Check if origin matches any allowed pattern
+        const isAllowed = allowedOrigins.some(allowedOrigin => {
+            if (typeof allowedOrigin === 'string') {
+                return origin === allowedOrigin;
+            } else if (allowedOrigin instanceof RegExp) {
+                return allowedOrigin.test(origin);
+            }
+            return false;
+        });
+        
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            console.log('CORS blocked origin:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     methods:["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
@@ -94,13 +126,30 @@ app.options('/uploads/*', cors(corsOptions));
 // Serve static files from uploads directory with enhanced CORS
 app.use('/uploads', (req, res, next) => {
   // Set CORS headers explicitly for static files
-  const allowedOrigins = [
-    process.env.FRONTEND_URL
-  ];
   const origin = req.headers.origin;
   
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+  if (origin) {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:3000',
+      process.env.PRODUCTION_FRONTEND_URL,
+    ].filter(Boolean);
+    
+    const allowedPatterns = [
+      /^https:\/\/.*\.onrender\.com$/,
+      /^https:\/\/.*\.netlify\.app$/,
+      /^https:\/\/.*\.vercel\.app$/,
+      /^https:\/\/.*\.herokuapp\.com$/
+    ];
+    
+    const isAllowed = allowedOrigins.includes(origin) || 
+                     allowedPatterns.some(pattern => pattern.test(origin));
+    
+    if (isAllowed) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
   }
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
