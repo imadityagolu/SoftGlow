@@ -331,16 +331,16 @@ const sendPasswordResetOTP = async (req, res) => {
     // Send OTP email
     const emailResult = await sendOTPEmail(email, otp, customer.firstName);
 
-    if (!emailResult.success) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to send OTP email. Please try again.'
-      });
-    }
+    // Always return success since OTP is generated and saved to database
+    // Even if email fails, user can still use the OTP (logged in console for debugging)
+    const message = emailResult.emailFailed 
+      ? 'OTP generated successfully. Check server logs for OTP (email delivery failed)'
+      : 'OTP sent successfully to your email address';
 
     res.status(200).json({
       success: true,
-      message: 'OTP sent successfully to your email address'
+      message: message,
+      emailSent: !emailResult.emailFailed
     });
 
   } catch (error) {

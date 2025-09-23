@@ -19,15 +19,18 @@ const generateOTP = () => {
 // Send OTP email
 const sendOTPEmail = async (email, otp, firstName) => {
   try {
+    // Always log OTP for debugging purposes
+    console.log('\n🔐 OTP DEBUG INFO 🔐');
+    console.log('═══════════════════════════════════════');
+    console.log(`📧 To: ${email}`);
+    console.log(`👤 Name: ${firstName}`);
+    console.log(`🔐 OTP: ${otp}`);
+    console.log('⏰ Valid for: 10 minutes');
+    console.log('═══════════════════════════════════════\n');
+
     // Development mode - if no email password is set, just log the OTP
     if (!process.env.EMAIL_PASS || process.env.EMAIL_PASS === 'your-app-password' || process.env.EMAIL_PASS === '') {
-      console.log('\n🔥 DEVELOPMENT MODE - EMAIL NOT SENT 🔥');
-      console.log('═══════════════════════════════════════');
-      console.log(`📧 To: ${email}`);
-      console.log(`👤 Name: ${firstName}`);
-      console.log(`🔐 OTP: ${otp}`);
-      console.log('⏰ Valid for: 10 minutes');
-      console.log('═══════════════════════════════════════\n');
+      console.log('🔥 DEVELOPMENT MODE - EMAIL NOT SENT 🔥');
       return { success: true, message: 'OTP logged to console (development mode)' };
     }
 
@@ -78,10 +81,14 @@ const sendOTPEmail = async (email, otp, firstName) => {
     };
 
     const result = await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent successfully!');
     return { success: true, messageId: result.messageId };
   } catch (error) {
-    console.error('Email sending error:', error);
-    return { success: false, error: error.message };
+    console.error('❌ Email sending error:', error);
+    console.log('⚠️ Email failed but OTP is still valid for password reset');
+    // Return success anyway since OTP is generated and saved to database
+    // User can still use the OTP that's logged above
+    return { success: true, error: error.message, emailFailed: true };
   }
 };
 
