@@ -20,14 +20,14 @@ const generateOTP = () => {
 const sendOTPEmail = async (email, otp, firstName) => {
   try {
     // Development mode - if no email password is set, just log the OTP
-    if (!process.env.EMAIL_PASS || process.env.EMAIL_PASS === 'your-app-password') {
-      // console.log('\n🔥 DEVELOPMENT MODE - EMAIL NOT SENT 🔥');
-      // console.log('═══════════════════════════════════════');
-      // console.log(`📧 To: ${email}`);
-      // console.log(`👤 Name: ${firstName}`);
-      // console.log(`🔐 OTP: ${otp}`);
-      // console.log('⏰ Valid for: 10 minutes');
-      // console.log('═══════════════════════════════════════\n');
+    if (!process.env.EMAIL_PASS || process.env.EMAIL_PASS === 'your-app-password' || process.env.EMAIL_PASS === '') {
+      console.log('\n🔥 DEVELOPMENT MODE - EMAIL NOT SENT 🔥');
+      console.log('═══════════════════════════════════════');
+      console.log(`📧 To: ${email}`);
+      console.log(`👤 Name: ${firstName}`);
+      console.log(`🔐 OTP: ${otp}`);
+      console.log('⏰ Valid for: 10 minutes');
+      console.log('═══════════════════════════════════════\n');
       return { success: true, message: 'OTP logged to console (development mode)' };
     }
 
